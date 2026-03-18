@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}👋 See You Soon | PredictMyGrade{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+      // Auto-redirect to login after 4 seconds
+      setTimeout(() => {
+        window.location.href = "{% url 'core:login' %}";
+      }, 4000);
+    </script>
+{% endblock %}
+{% block content %}
+<h1>👋 You’ve been logged out</h1>
+  <p>Thanks for using <strong>PredictMyGrade</strong>. We hope to see you again soon!</p>
+
+  <a href="{% url 'core:login' %}" class="btn">Return to Login</a>
+
+  <div class="redirect">
+    Redirecting you automatically in a few seconds…
+  </div>
+{% endblock %}

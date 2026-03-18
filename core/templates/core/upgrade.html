@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Upgrade to PredictMyGrade Premium{% endblock %}
+{% block body_attrs %} class="theme-{{ request.session.theme|default:'dark' }}"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css">
+  <style>
+    .upgrade-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .upgrade-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .upgrade-subtitle {
+      color: var(--muted);
+      margin-bottom: 2rem;
+      max-width: 720px;
+    }
+    .upgrade-promo {
+      background: linear-gradient(90deg, #7c3aed, #a78bfa);
+      color: #fff;
+      padding: 0.85rem 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+    .plan-grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      margin-bottom: 2rem;
+    }
+    .plan-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1.75rem;
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    .plan-card--accent {
+      background: linear-gradient(165deg, rgba(124, 58, 237, 0.12), rgba(59, 130, 246, 0.12));
+      border-color: transparent;
+      box-shadow: 0 10px 25px rgba(88, 28, 135, 0.25);
+    }
+    .plan-pill {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--brand);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    .plan-card--accent .plan-pill {
+      color: var(--brand-2);
+    }
+    .plan-card h2 {
+      margin: 0 0 0.5rem;
+    }
+    .plan-price {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--brand);
+      margin-bottom: 1rem;
+    }
+    .plan-card--accent .plan-price {
+      color: var(--brand-2);
+    }
+    .plan-details {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+    }
+    .plan-details li {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 0.45rem;
+      font-size: 0.95rem;
+    }
+    .plan-details span {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .plan-card button {
+      margin-top: auto;
+    }
+    #upgrade-alert {
+      margin-top: 1rem;
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2rem;
+      background: var(--card-2);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding: 0.85rem 1rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    .comparison-table td:first-child,
+    .comparison-table th:first-child {
+      text-align: left;
+      min-width: 240px;
+    }
+    .comparison-table th {
+      background: var(--brand);
+      color: #fff;
+      font-size: 1.05rem;
+    }
+    .comparison-check {
+      color: #16a34a;
+      font-weight: 700;
+    }
+    .comparison-cross {
+      color: #dc2626;
+      font-weight: 700;
+    }
+    .upgrade-footer-note {
+      text-align: center;
+      margin-top: 2.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+  <style>
+    .premium-status-card {
+      border: 1px solid var(--border);
+      background: var(--card-2);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 25px rgba(15, 11, 26, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .premium-status-card__tag {
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--brand);
+      font-weight: 700;
+    }
+    .premium-status-card__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .premium-status-card__message {
+      margin: 0;
+      color: var(--muted);
+    }
+  </style>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.AOS) {
+        AOS.init({ duration: 800, once: true });
+      }
+
+      const checkoutEndpoint = "{% url 'core:create_checkout_session_default' %}";
+      const csrfInput = document.querySelector("#upgrade-checkout-form [name='csrfmiddlewaretoken']");
+      const csrfToken = csrfInput ? csrfInput.value : null;
+      const alertBox = document.getElementById("upgrade-alert");
+
+      const showMessage = (text, variant) => {
+        if (!alertBox) {
+          return;
+        }
+        if (!text) {
+          alertBox.classList.add("d-none");
+          alertBox.textContent = "";
+          return;
+        }
+        alertBox.textContent = text;
+        alertBox.className = "alert mt-4 alert-" + (variant || "info");
+        alertBox.classList.remove("d-none");
+      };
+
+      const buttons = document.querySelectorAll(".js-upgrade-cta");
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          if (!csrfToken) {
+            showMessage("Missing security token. Refresh and try again.", "danger");
+            return;
+          }
+          const plan = button.dataset.plan || "monthly";
+          const body = new URLSearchParams();
+          body.append("plan_type", plan);
+
+          const originalText = button.textContent;
+          button.disabled = true;
+          button.textContent = "Redirecting...";
+          showMessage("", "info");
+
+          fetch(checkoutEndpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+              "X-CSRFToken": csrfToken,
+              "X-Requested-With": "XMLHttpRequest",
+            },
+            body,
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("request_failed");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              if (data.ok && data.checkout_url) {
+                window.location.href = data.checkout_url;
+                return;
+              }
+              showMessage(data.error || "We could not start checkout right now.", "danger");
+            })
+            .catch(() => {
+              showMessage("We could not start checkout right now. Please try again soon.", "danger");
+            })
+            .finally(() => {
+              button.disabled = false;
+              button.textContent = originalText;
+            });
+        });
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<div class="upgrade-page" data-aos="fade-up">
+  {% if has_premium_access and not profile.is_trial_active %}
+    <div class="premium-status-card" data-aos="fade-down">
+      <div class="premium-status-card__tag">Premium member</div>
+      <p class="premium-status-card__message">
+        {% with summary=subscription_summary %}
+          {% if summary %}
+            You're on <strong>{{ summary.plan_display }}</strong>
+            {% if summary.amount_display %}
+              - {{ summary.amount_display }}
+            {% endif %}.
+            {% if summary.status %}
+              Status: {{ summary.status|capfirst }}.
+            {% endif %}
+          {% else %}
+            Premium access is active on your account.
+          {% endif %}
+        {% endwith %}
+      </p>
+      <p class="premium-status-card__message">
+        Need to pause, switch plans, or cancel? Use the buttons below to manage billing and membership.
+      </p>
+      {% if subscription_summary and subscription_summary.days_remaining is not None %}
+      <p class="premium-status-card__message muted small">
+        Renews in {{ subscription_summary.days_remaining }} day{{ subscription_summary.days_remaining|pluralize }}.
+      </p>
+      {% endif %}
+      <div class="premium-status-card__actions">
+        <a class="btn secondary small" href="{{ manage_subscription_url }}">Manage subscription</a>
+        <a class="btn ghost small" href="{{ manage_subscription_url }}">Cancel membership</a>
+      </div>
+    </div>
+  {% endif %}
+  {% if promotion_code %}
+    <div class="upgrade-promo">
+      {% if billing_is_mock %}
+        Demo mode is active. Use code <strong>{{ promotion_code }}</strong> in the mock checkout for presentation only. No real payment is taken.
+      {% else %}
+        Student special - enter <strong>{{ promotion_code }}</strong> under "Add promotion code" at checkout for your launch discount.
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="upgrade-title">&#128640; Upgrade to PredictMyGrade Premium</div>
+  <p class="upgrade-subtitle">
+    Unlock AI coaching, advanced analytics, and premium automations tied to your real modules, workloads, and milestones.
+  </p>
+  {% if profile.is_trial_active and plan_days_remaining %}
+    <div class="alert" role="alert">
+      Your trial ends in {{ plan_days_remaining }} day{{ plan_days_remaining|pluralize }}. Upgrade now to keep premium features.
+    </div>
+  {% endif %}
+
+    <div class="plan-grid">
+      <div class="plan-card" data-aos="zoom-in-up">
+        <p class="plan-pill">Flexible</p>
+        <h2>{{ monthly_snapshot.nickname|default:"Monthly Plan" }}</h2>
+        <p class="plan-price">
+          {% if monthly_snapshot.display %}
+            {{ monthly_snapshot.display }}
+          {% else %}
+            <span class="muted">Price shown during checkout</span>
+          {% endif %}
+        </p>
+        <ul class="plan-details">
+          <li><span>&#10003;</span> Cancel anytime</li>
+          <li><span>&#10003;</span> Smart Alerts & AI Mentor</li>
+          <li><span>&#10003;</span> Snapshot history + export</li>
+        </ul>
+        {% if has_premium_access and not profile.is_trial_active %}
+          <button type="button" class="btn secondary" disabled>
+            {% if subscription_summary and subscription_summary.plan_interval == "month" %}
+              You're on this plan
+            {% else %}
+              Premium active
+            {% endif %}
+          </button>
+        {% else %}
+          <button type="button" class="btn secondary js-upgrade-cta" data-plan="monthly">
+            {% if billing_is_mock %}Start Demo Monthly{% else %}Start Monthly{% endif %}
+          </button>
+        {% endif %}
+      </div>
+
+      <div class="plan-card plan-card--accent" data-aos="zoom-in-up" data-aos-delay="120">
+        <p class="plan-pill">Best value</p>
+        <h2>{{ yearly_snapshot.nickname|default:"Yearly Plan" }}</h2>
+        <p class="plan-price">
+          {% if yearly_snapshot.display %}
+            {{ yearly_snapshot.display }}
+          {% else %}
+            <span class="muted">Price shown during checkout</span>
+          {% endif %}
+        </p>
+        <ul class="plan-details">
+          <li><span>&#10003;</span> Two months free vs monthly</li>
+          <li><span>&#10003;</span> Priority mentor responses</li>
+          <li><span>&#10003;</span> Upcoming features auto-included</li>
+        </ul>
+        {% if has_premium_access and not profile.is_trial_active %}
+          {% if subscription_summary and subscription_summary.plan_interval == "month" %}
+            <a class="btn" href="{{ manage_subscription_url }}">Switch to Yearly</a>
+          {% else %}
+            <button type="button" class="btn" disabled>
+              {% if subscription_summary and subscription_summary.plan_interval == "year" %}
+                You're on this plan
+              {% else %}
+                Premium active
+              {% endif %}
+            </button>
+          {% endif %}
+        {% else %}
+          <button type="button" class="btn js-upgrade-cta" data-plan="yearly">
+            {% if billing_is_mock %}Start Demo Yearly{% else %}Start Yearly{% endif %}
+          </button>
+        {% endif %}
+      </div>
+    </div>
+
+  <div id="upgrade-alert" class="alert mt-4 d-none" role="alert"></div>
+
+  <table class="comparison-table" data-aos="fade-up">
+    <thead>
+      <tr>
+        <th>Features</th>
+        <th>Free</th>
+        <th>Premium</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Access to core grade calculator</td>
+        <td class="comparison-check">&#10003;</td>
+        <td class="comparison-check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>AI performance predictions</td>
+        <td class="comparison-cross">&#10005;</td>
+        <td class="comparison-check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>Advanced analytics & cohort benchmarks</td>
+        <td class="comparison-cross">&#10005;</td>
+        <td class="comparison-check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>Automatic backups + CSV/JSON exports</td>
+        <td class="comparison-cross">&#10005;</td>
+        <td class="comparison-check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>Milestone tracking & Smart Insights</td>
+        <td class="comparison-cross">&#10005;</td>
+        <td class="comparison-check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>Priority support + mentor coaching</td>
+        <td class="comparison-cross">&#10005;</td>
+        <td class="comparison-check">&#10003;</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="upgrade-footer-note">
+    {% if billing_is_mock %}
+      Demo billing only - your data, history, and achievements remain in your account.<br>
+      This portfolio build uses a mock checkout flow and does not charge real cards.
+    {% else %}
+      Cancel anytime - your data, history, and achievements remain in your account.<br>
+      Billing is powered by <strong>BrightTrail Studio</strong> with Stripe.
+    {% endif %}
+  </p>
+</div>
+
+<form id="upgrade-checkout-form" style="display:none;">
+  {% csrf_token %}
+</form>
+{% endblock %}

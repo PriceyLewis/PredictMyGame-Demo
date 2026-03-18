@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service{% endblock %}
+{% block content %}
+<section class="legal-page">
+  <header class="legal-hero">
+    <h1>Terms of Service</h1>
+    <p>Last updated: {% now "j F Y" %}</p>
+  </header>
+
+<article class="legal-card">
+  <h2>1. Acceptance of Terms</h2>
+  <p>By accessing or using PredictMyGrade you agree to these Terms. If you do not agree, please discontinue use of the website and related services. PredictMyGrade is intended for individuals aged 16 and older. Anyone under 18 must obtain explicit parental/guardian consent (or school-managed consent) before creating an account or storing personal data, and we may request proof at any time.</p>
+</article>
+
+  <article class="legal-card">
+    <h2>2. Purpose of the Service</h2>
+    <p>PredictMyGrade provides tools for grade prediction, progress tracking, and study planning. The results are estimates only and should not be interpreted as official academic grades or accredited advice.</p>
+  </article>
+
+  <article class="legal-card">
+    <h2>3. Accounts</h2>
+    <ul>
+      <li>You must provide accurate information when creating an account.</li>
+      <li>You are responsible for maintaining the confidentiality of your password.</li>
+      <li>You are responsible for all activities conducted under your account.</li>
+    </ul>
+  </article>
+
+  <article class="legal-card">
+    <h2>4. Permitted Use</h2>
+    <p>You agree not to reverse engineer, copy, or resell the service; upload unlawful or offensive content; or attempt to breach the security, stability, or availability of PredictMyGrade.</p>
+  </article>
+
+  <article class="legal-card">
+    <h2>5. Intellectual Property</h2>
+    <p>All site content, logos, designs, and code are owned by PredictMyGrade unless otherwise stated. You may not reuse or republish these assets without permission.</p>
+  </article>
+
+  <article class="legal-card">
+    <h2>6. Limitation of Liability</h2>
+    <p>PredictMyGrade is provided &ldquo;as is&rdquo;. We do not guarantee the accuracy of predictions and are not liable for any losses, decisions, or outcomes that result from relying on them.</p>
+  </article>
+
+  <article class="legal-card">
+    <h2>7. Payments &amp; Subscriptions</h2>
+    <ul>
+      <li>Premium payments are processed securely via Stripe.</li>
+      <li>Subscriptions renew automatically unless cancelled before the renewal date.</li>
+      <li>Refunds are handled in line with UK consumer protection law.</li>
+    </ul>
+  </article>
+
+  <article class="legal-card">
+    <h2>8. Termination</h2>
+    <p>We may suspend or terminate accounts that breach these Terms or misuse the service. You may delete your account at any time from within the application.</p>
+  </article>
+
+  <article class="legal-card">
+    <h2>9. Governing Law</h2>
+    <p>These Terms are governed by the laws of England and Wales. Any disputes shall be handled by the courts of England and Wales.</p>
+  </article>
+
+  <article class="legal-card">
+    <h2>10. Privacy &amp; Data Rights</h2>
+    <p>Your use of PredictMyGrade is also governed by our <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>. You may export or delete your data at any time via the in-app Privacy Dashboard, request account deletion, or withdraw consent for optional processing by emailing <a href="mailto:privacy@predictmygrade.com">privacy@predictmygrade.com</a>.</p>
+  </article>
+</section>
+{% endblock %}

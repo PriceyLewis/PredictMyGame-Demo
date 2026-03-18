@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin Analytics | PredictMyGrade{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+      body {
+        background: #f8f9fc;
+        font-family: "Poppins", "Segoe UI", sans-serif;
+      }
+      .dashboard-title {
+        text-align: center;
+        margin-top: 40px;
+        color: #004aad;
+        font-weight: 600;
+      }
+      .card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+      }
+      .card:hover {
+        transform: translateY(-4px);
+      }
+      .trend-up { color: #28a745; font-weight: 600; }
+      .trend-down { color: #dc3545; font-weight: 600; }
+      .icon { font-size: 2rem; color: #004aad; }
+    </style>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<div class="container mt-5 mb-5">
+    <h2 class="dashboard-title"><i class="bi bi-bar-chart-fill"></i> Admin Analytics Dashboard</h2>
+    <p class="text-center text-muted mb-5">Data from {{ date_range }}</p>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+      {% for card in summary_cards %}
+      <div class="col-md-2 col-sm-6">
+        <div class="card text-center p-4">
+          <i class="bi {{ card.icon }} icon"></i>
+          <h6 class="mt-3">{{ card.label }}</h6>
+          <h2>{{ card.value }}</h2>
+          {% if card.trend > 0 %}
+            <span class="trend-up"><i class="bi bi-graph-up"></i> +{{ card.trend }}%</span>
+          {% elif card.trend < 0 %}
+            <span class="trend-down"><i class="bi bi-graph-down"></i> {{ card.trend }}%</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Provider Breakdown -->
+    <div class="card p-4 mb-5">
+      <h5 class="text-center mb-3"><i class="bi bi-people"></i> OAuth Provider Breakdown</h5>
+      {% if provider_data %}
+      <ul class="list-group list-group-flush">
+        {% for provider, total in provider_data.items %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ provider }}
+            <span class="badge bg-primary rounded-pill">{{ total }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <p class="text-center text-muted">No OAuth accounts yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- Chart -->
+    <div class="card p-4 mb-4">
+      <h5 class="text-center mb-3"><i class="bi bi-graph-up"></i> Weekly Activity Overview</h5>
+      <canvas id="activityChart" height="120"></canvas>
+    </div>
+
+    <div class="text-center mt-4">
+      <a href="?export=1" class="btn btn-primary btn-lg me-3"><i class="bi bi-file-earmark-arrow-down"></i> Export CSV</a>
+      <a href="{% url 'core:admin_users' %}" class="btn btn-info btn-lg me-3"><i class="bi bi-people-fill"></i> Manage Users</a>
+      <a href="{% url 'core:system_health' %}" class="btn btn-warning btn-lg me-3"><i class="bi bi-activity"></i> System Health</a>
+      <a href="{% url 'core:dashboard' %}" class="btn btn-outline-secondary btn-lg">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('activityChart');
+    const activityChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [
+          { label: 'Bug Reports', data: {{ chart_data.bug_reports|safe }}, borderColor: '#ff6384', tension: 0.3 },
+          { label: 'Support', data: {{ chart_data.support_msgs|safe }}, borderColor: '#36a2eb', tension: 0.3 },
+          { label: 'Exports', data: {{ chart_data.exports|safe }}, borderColor: '#ffcd56', tension: 0.3 },
+          { label: 'Deletions', data: {{ chart_data.deletions|safe }}, borderColor: '#4bc0c0', tension: 0.3 }
+        ]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }
+      }
+    });
+  </script>
+{% endblock %}

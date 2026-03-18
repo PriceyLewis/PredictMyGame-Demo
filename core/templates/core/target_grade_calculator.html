@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Target Grade Calculator{% endblock %}
+{% block body_attrs %} class="theme-{{ request.session.theme|default:'dark' }}"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+{% block content %}
+<div class="page" data-aos="fade-up">
+
+  <div class="header">
+    <div class="title">🎯 Target Grade Calculator</div>
+    <a href="{% url 'core:dashboard' %}" class="btn secondary">← Back to Dashboard</a>
+  </div>
+
+  <div class="card">
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Current Average (%)</label>
+        <input type="number" name="current_avg" step="0.1" min="0" max="100" required value="{{ form_values.current_avg|default:'' }}">
+      </div>
+
+      <div class="form-group">
+        <label>Completed Credits</label>
+        <input type="number" name="completed_credits" step="1" min="0" max="240" required value="{{ form_values.completed_credits|default:'' }}">
+      </div>
+
+      <div class="form-group">
+        <label>Target Classification</label>
+        <select name="target_class">
+          <option value="First"{% if form_values.target_class == "First" %} selected{% endif %}>First</option>
+          <option value="Upper Second (2:1)"{% if form_values.target_class == "Upper Second (2:1)" %} selected{% endif %}>Upper Second (2:1)</option>
+          <option value="Lower Second (2:2)"{% if form_values.target_class == "Lower Second (2:2)" %} selected{% endif %}>Lower Second (2:2)</option>
+          <option value="Third"{% if form_values.target_class == "Third" %} selected{% endif %}>Third</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn primary">Calculate Required Grades</button>
+    </form>
+  </div>
+
+  {% if result %}
+  <div class="card highlight" data-aos="fade-up">
+    {% if result.error %}
+      <p class="text-red-400">{{ result.error }}</p>
+    {% else %}
+      <h3>📊 Result</h3>
+      <p>
+        To achieve a <b>{{ result.target_class }}</b> classification ({{ result.target_avg }}% average),<br>
+        you need an average of <b>{{ result.required_avg_remaining }}%</b> in your
+        remaining <b>{{ result.remaining_credits }}</b> credits.
+      </p>
+      {% if result.required_avg_remaining > 100 %}
+        <p class="text-red-400">⚠️ This target is currently impossible — aim for the next level below.</p>
+      {% elif result.required_avg_remaining >= 70 %}
+        <p class="text-yellow-400">🔥 Ambitious target — strong improvement required.</p>
+      {% elif result.required_avg_remaining >= 60 %}
+        <p class="text-green-400">✅ Within reach — steady effort will get you there.</p>
+      {% else %}
+        <p class="text-green-300">🎯 You’re on track — maintain current performance!</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<style>
+.page { padding: 2rem; max-width: 700px; margin: auto; }
+.card { background: #1e1e2f; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; }
+.form-group { margin-bottom: 1rem; }
+label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+input, select { width: 100%; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #444; background: #2a2a3f; color: #fff; }
+.btn.primary { background: #7c3aed; color: #fff; padding: 0.6rem 1.2rem; border-radius: 0.5rem; }
+.text-red-400 { color: #ef4444; }
+.text-yellow-400 { color: #facc15; }
+.text-green-400, .text-green-300 { color: #22c55e; }
+</style>
+{% endblock %}

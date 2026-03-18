@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Smart Study Insights – PredictMyGrade Premium{% endblock %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4">Smart Study Insights (Premium)</h2>
+  <div class="card shadow p-4">
+    <p class="text-muted mb-3">
+      Personalized recommendations based on your recent academic data.
+    </p>
+    <ul class="list-group">
+      {% for t in tips %}
+        <li class="list-group-item">{{ t }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

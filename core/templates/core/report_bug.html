@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Report a Bug | PredictMyGrade{% endblock %}
+{% block body_attrs %} class="bg-light p-5"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<div class="container" style="max-width:700px;">
+    <h2 class="text-primary mb-4">🐞 Report a Bug</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="email" class="form-label">Your Email (optional)</label>
+        <input type="email" name="email" id="email" class="form-control" placeholder="you@example.com">
+      </div>
+      <div class="mb-3">
+        <label for="description" class="form-label">Describe the Problem</label>
+        <textarea name="description" id="description" rows="5" class="form-control" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit Bug Report</button>
+      <a href="{% url 'core:settings_view' %}" class="btn btn-secondary ms-2">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

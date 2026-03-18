@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Live Analytics{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="page">
+  <div class="header-row">
+    <div class="title">📊 Live Analytics</div>
+    <div class="quick-actions">
+      <a class="btn-secondary" href="{% url 'core:dashboard' %}">⬅ Back</a>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card col-6">
+      <h3>Grade Distribution</h3>
+      <canvas id="gradesChart"></canvas>
+    </div>
+
+    <div class="card col-6">
+      <h3>Module Averages</h3>
+      <canvas id="modulesChart"></canvas>
+    </div>
+
+    <div class="card col-12">
+      <h3>Performance Summary</h3>
+      <div class="banner">
+        📈 Data refreshes automatically when new modules or grades are added.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ctx1 = document.getElementById("gradesChart");
+const ctx2 = document.getElementById("modulesChart");
+
+new Chart(ctx1, {
+  type:"doughnut",
+  data:{
+    labels:["First","2:1","2:2","Third","Fail"],
+    datasets:[{ data:[45,30,15,8,2], backgroundColor:["#8b5cf6","#a78bfa","#c4b5fd","#d8b4fe","#ede9fe"] }]
+  }
+});
+
+new Chart(ctx2, {
+  type:"bar",
+  data:{
+    labels:["Module 1","Module 2","Module 3","Module 4"],
+    datasets:[{ data:[70,62,58,74], backgroundColor:"#8b5cf6", borderRadius:8 }]
+  },
+  options:{ scales:{ y:{ beginAtZero:true, max:100 } }, plugins:{ legend:{display:false} } }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Progress Timeline{% endblock %}
+{% block body_attrs %} class="theme-{{ request.session.theme|default:'dark' }}"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+{% endblock %}
+{% block content %}
+<div class="page" data-aos="fade-up">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title">
+      📆 Progress Timeline
+      {% if is_premium %}
+        <span class="badge-premium"><i class="fas fa-crown"></i> Premium</span>
+      {% else %}
+        <span class="badge-free">Free Plan</span>
+      {% endif %}
+    </div>
+    <a href="{% url 'core:dashboard' %}" class="btn secondary">← Back to Dashboard</a>
+  </div>
+
+  <!-- AI Summary -->
+  {% if ai_summary %}
+  <div class="card highlight" data-aos="fade-up">
+    <h3>🤖 AI Summary</h3>
+    <p>{{ ai_summary }}</p>
+  </div>
+  {% endif %}
+
+  <!-- Timeline Chart -->
+  <div class="card" data-aos="fade-up">
+    <h3>📈 Performance Timeline</h3>
+    <canvas id="timelineChart" height="90"></canvas>
+    <div class="stats-row">
+      <div><b>Average:</b> {{ avg }}%</div>
+      <div><b>Classification:</b> {{ band }}</div>
+      <div><b>Trend:</b> 
+        {% if trend == 'improving' %}
+          <span class="text-green-400">📈 Improving (+{{ change }}%)</span>
+        {% elif trend == 'declining' %}
+          <span class="text-red-400">📉 Declining ({{ change }}%)</span>
+        {% else %}
+          ⚖ Stable
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Milestones -->
+  <div class="card" data-aos="fade-up">
+    <h3>🎯 Milestone Tracker</h3>
+    <div class="milestone-grid">
+      {% for m in milestones %}
+        <div class="milestone {{ 'active' if m.reached }}">
+          <span>{{ m.label }}</span>
+          {% if m.reached %}<i class="fas fa-check-circle text-green-400"></i>{% else %}<i class="fas fa-lock text-gray-400"></i>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div class="card" data-aos="fade-up">
+    <h3>💡 Smart Insights</h3>
+    {% if insights %}
+      <ul class="insight-list">
+        {% for i in insights %}
+          <li><i class="fas fa-robot text-purple-400"></i> {{ i.summary }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">No Smart Insights yet — take a snapshot or comparison to generate new ones.</p>
+    {% endif %}
+  </div>
+
+  <!-- Timeline Comparisons -->
+  <div class="card" data-aos="fade-up">
+    <h3>📊 Timeline Comparisons</h3>
+    {% if comparisons %}
+      <table class="table">
+        <thead>
+          <tr><th>Period</th><th>Avg (%)</th><th>Change</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for c in comparisons %}
+            <tr>
+              <td>{{ c.start_date }} → {{ c.end_date }}</td>
+              <td>{{ c.period_average }}</td>
+              <td>{% if c.change_percent >= 0 %}<span class="text-green-400">+{{ c.change_percent }}%</span>{% else %}<span class="text-red-400">{{ c.change_percent }}%</span>{% endif %}</td>
+              <td>{{ c.change_type|title }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No timeline comparisons yet. Take snapshots to begin tracking progress.</p>
+    {% endif %}
+  </div>
+
+  <!-- Actions -->
+  <div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}" style="margin-top:1rem;">
+    <div class="premium-feature__content actions" data-aos="fade-up">
+      <a
+        href="{% url 'core:export_ai_report_pdf' %}"
+        class="btn primary"
+        {% if not has_premium_access %}aria-disabled="true" tabindex="-1"{% endif %}
+      ><i class="fas fa-file-pdf"></i> Export Timeline PDF</a>
+      <a
+        href="{% url 'core:ai_reports' %}"
+        class="btn secondary"
+        {% if not has_premium_access %}aria-disabled="true" tabindex="-1"{% endif %}
+      ><i class="fas fa-lightbulb"></i> View Full AI Reports</a>
+    </div>
+    {% if not has_premium_access %}
+    <div class="premium-feature__overlay">
+      <div class="premium-feature__icon"><i class="fa-solid fa-chart-line"></i></div>
+      <strong>Exporting timelines and insights is premium-only.</strong>
+      <p class="premium-feature__description">
+        Upgrade to unlock PDF exports and the full AI insights dashboard.
+      </p>
+      <a href="{% url 'core:upgrade' %}" class="btn premium-feature__cta">Upgrade for exports</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+AOS.init();
+
+const ctx = document.getElementById('timelineChart').getContext('2d');
+const labels = {{ labels|safe }};
+const data = {{ data|safe }};
+const rollingAvg = (arr, windowSize=3) => arr.map((_,i,src)=>{
+  const start = Math.max(0, i-windowSize+1);
+  const subset = src.slice(start, i+1);
+  return subset.reduce((a,b)=>a+b,0)/subset.length;
+});
+
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Performance (%)',
+      data: data,
+      borderColor: '#7c3aed',
+      backgroundColor: 'rgba(124,58,237,0.1)',
+      tension: 0.35,
+      borderWidth: 3,
+      pointRadius: 4,
+      fill: true
+    },{
+      label: 'Rolling Avg',
+      data: rollingAvg(data),
+      borderColor: '#22c55e',
+      borderWidth: 2,
+      borderDash: [5,5],
+      pointRadius: 0
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: true, position: 'bottom' },
+      tooltip: {
+        mode: 'index',
+        intersect: false
+      }
+    },
+    scales: {
+      y: { beginAtZero: true, max: 100 },
+      x: { ticks: { color: '#ccc' } }
+    }
+  }
+});
+</script>
+
+<style>
+.page { padding: 2rem; max-width: 1100px; margin: auto; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.card { background: var(--card-bg, #1f1f2f); padding: 1.5rem; border-radius: 1rem; margin-bottom: 1.5rem; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+.card.highlight { border: 2px solid #7c3aed; background: #2c1f3f; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 0.6rem; text-align: left; border-bottom: 1px solid #333; }
+.milestone-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+.milestone { background: #27263a; border-radius: 0.75rem; padding: 0.8rem 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.milestone.active { background: #3a2b5f; border: 1px solid #7c3aed; }
+.insight-list { list-style: none; padding: 0; }
+.insight-list li { margin-bottom: 0.6rem; }
+.actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem; }
+.stats-row { display: flex; justify-content: space-between; margin-top: 1rem; font-size: 0.9rem; color: #ccc; }
+.btn { padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; color: #fff; }
+.btn.primary { background: #7c3aed; }
+.btn.secondary { background: #3b3b4f; }
+.badge-premium { background: #7c3aed; color: #fff; padding: 0.3rem 0.6rem; border-radius: 0.4rem; font-size: 0.8rem; margin-left: 0.5rem; }
+.badge-free { background: #555; color: #ddd; padding: 0.3rem 0.6rem; border-radius: 0.4rem; font-size: 0.8rem; margin-left: 0.5rem; }
+.text-green-400 { color: #22c55e; }
+.text-red-400 { color: #ef4444; }
+</style>
+{% endblock %}

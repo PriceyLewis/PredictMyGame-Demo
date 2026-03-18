@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Snapshot History{% endblock %}
+{% block content %}
+{% extends "core/dashboard_base.html" %}
+
+
+{% block title %}Snapshot History — PredictMyGrade
+{% endblock %}
+
+{% block content %}
+<div class="page" data-aos="fade-up">
+
+  <div class="header">
+    <div class="title">📸 Snapshot History</div>
+    <div>
+      <button id="takeSnapshotBtn" class="btn">➕ Take New Snapshot</button>
+      <a href="{% url 'core:dashboard' %}" class="btn secondary">⬅ Back</a>
+    </div>
+  </div>
+
+  <div class="card" id="snapshotCard" data-aos="fade-up">
+    {% if snapshots %}
+      <ul id="snapshotList" style="list-style:none;padding:0;margin:0;">
+        {% for s in snapshots %}
+          <li style="padding:.8rem 0;border-bottom:1px solid var(--border);">
+            <strong style="color:var(--brand-3);">{{ s.created_at|date:"M d, Y H:i" }}</strong>
+            — {{ s.classification }} ({{ s.average_percent|floatformat:1 }}%)
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No snapshots yet. Take one to begin tracking progress.</p>
+    {% endif %}
+  </div>
+
+  <div class="card" style="margin-top:1rem" data-aos="fade-up">
+    <h3>📈 Performance Over Time</h3>
+    {% if snapshots %}
+      <canvas id="snapshotChart" height="100"></canvas>
+    {% else %}
+      <p class="muted">No timeline data yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script>
+const ctx = document.getElementById("snapshotChart")?.getContext("2d");
+const labels = {{ timeline_labels|safe }};
+const values = {{ timeline_values|safe }};
+if (ctx && labels.length) {
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Average %",
+        data: values,
+        borderColor: "#7c3aed",
+        backgroundColor: "rgba(124,58,237,0.2)",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.35
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
+  });
+}
+
+document.getElementById("takeSnapshotBtn")?.addEventListener("click", async () => {
+  const btn = document.getElementById("takeSnapshotBtn");
+  btn.disabled = true; btn.textContent = "📸 Taking...";
+  try {
+    const res = await fetch("{% url 'core:take_snapshot_now' %}");
+    const data = await res.json();
+    if (data.ok) {
+      Toastify({ text: `Snapshot saved (${data.avg}%)`, backgroundColor: "#22c55e", duration: 3000 }).showToast();
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      Toastify({ text: "⚠️ Snapshot failed", backgroundColor: "#ef4444", duration: 3000 }).showToast();
+    }
+  } catch {
+    Toastify({ text: "⚠️ Network error", backgroundColor: "#ef4444", duration: 3000 }).showToast();
+  } finally {
+    btn.disabled = false; btn.textContent = "➕ Take New Snapshot";
+  }
+});
+</script>
+{% endblock %}
+{% endblock %}

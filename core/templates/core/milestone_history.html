@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}🏅 Milestone History{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0"></script>
+
+<style>
+  body {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #f1f5f9;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .page {
+    max-width: 1000px;
+    margin: 2rem auto;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 2rem;
+    color: #facc15;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
+  }
+
+  .milestone-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .milestone-card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .milestone-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.4);
+  }
+
+  .milestone-card.locked {
+    filter: grayscale(80%);
+    opacity: 0.6;
+  }
+
+  .milestone-card.locked::after {
+    content: "🔒 Locked";
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  .emoji {
+    font-size: 3rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .milestone-label {
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+
+  .milestone-date {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-top: 0.3rem;
+  }
+
+  /* Progress bar */
+  .progress-outer {
+    height: 10px;
+    background: #334155;
+    border-radius: 10px;
+    margin: 0.8rem 0;
+    overflow: hidden;
+  }
+
+  .progress-inner {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #7c3aed, #a78bfa);
+    border-radius: 10px;
+    transition: width 1.2s ease;
+  }
+
+  /* ✨ Glowing effect for achieved milestones */
+  .milestone-card.glow {
+    box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);
+    animation: glowPulse 2.5s infinite ease-in-out;
+  }
+
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
+    50% { box-shadow: 0 0 25px rgba(250, 204, 21, 0.9); }
+    100% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
+  }
+
+  .next-goal {
+    font-size: 0.9rem;
+    color: #a5b4fc;
+    font-style: italic;
+  }
+
+  .back-btn {
+    display: inline-block;
+    margin-top: 2rem;
+    text-decoration: none;
+    background: #475569;
+    color: #fff;
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    transition: background 0.3s ease;
+  }
+
+  .back-btn:hover {
+    background: #64748b;
+  }
+</style>
+
+<div class="page">
+  <h1>🏅 Milestone History</h1>
+  <!-- 🧮 Summary Progress Overview -->
+<div class="summary-card" style="
+  background:#1e293b;
+  padding:1.5rem;
+  border-radius:16px;
+  margin-bottom:2rem;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
+  text-align:center;
+">
+  <h2 style="color:#facc15; margin-bottom:0.3rem;">{{ rank_title }}</h2>
+  <p class="muted">You’ve unlocked <strong>{{ unlocked_count }}</strong> out of <strong>{{ total_milestones }}</strong> milestones.</p>
+
+  <div class="progress-outer" style="height:14px; background:#334155; border-radius:10px; margin:1rem auto; max-width:500px; overflow:hidden;">
+    <div class="progress-inner" style="
+      width:{{ overall_progress }}%;
+      height:100%;
+      background:linear-gradient(90deg, #7c3aed, #a78bfa);
+      border-radius:10px;
+      transition:width 1.5s ease;
+    "></div>
+  </div>
+
+  <p class="muted">
+    {% if overall_progress < 100 %}
+      🎯 Only {{ 100|add:-overall_progress|floatformat:0 }}% left to reach <strong>Elite Scholar</strong>!
+    {% else %}
+      🌟 You’ve achieved every milestone — outstanding!
+    {% endif %}
+  </p>
+</div>
+
+  <p class="muted" style="margin-bottom:2rem;">
+    Your academic achievements and progress toward the next goal.
+  </p>
+
+  <div class="milestone-grid">
+    {% if milestones %}
+      {% for m in milestones %}
+        <div class="milestone-card glow">
+          <div class="emoji">{{ m.emoji }}</div>
+          <div class="milestone-label">{{ m.label }}</div>
+          <p><strong>{{ m.avg }}%</strong></p>
+          <div class="progress-outer">
+            <div class="progress-inner" style="width:{{ m.progress }}%;"></div>
+          </div>
+          <p class="next-goal">{{ m.message }}</p>
+          <p class="milestone-date">Achieved on {{ m.date }}</p>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="milestone-card locked">
+        <div class="emoji">💪</div>
+        <div class="milestone-label">2:2 Milestone</div>
+        <p class="muted">Reach 50% to unlock</p>
+        <div class="progress-outer"><div class="progress-inner" style="width:30%;"></div></div>
+        <p class="next-goal">20% to next level!</p>
+      </div>
+      <div class="milestone-card locked">
+        <div class="emoji">👏</div>
+        <div class="milestone-label">2:1 Milestone</div>
+        <p class="muted">Reach 60% to unlock</p>
+        <div class="progress-outer"><div class="progress-inner" style="width:50%;"></div></div>
+        <p class="next-goal">10% to next level!</p>
+      </div>
+      <div class="milestone-card locked">
+        <div class="emoji">🏆</div>
+        <div class="milestone-label">First-Class Milestone</div>
+        <p class="muted">Reach 70% to unlock</p>
+        <div class="progress-outer"><div class="progress-inner" style="width:70%;"></div></div>
+        <p class="next-goal">Almost there — aim for 70%!</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <a href="{% url 'core:dashboard' %}" class="back-btn">⬅ Back to Dashboard</a>
+</div>
+
+{% if request.user.userprofile.first_milestone_reached %}
+<script>
+  const duration = 2200;
+  const end = Date.now() + duration;
+  (function frame() {
+    confetti({
+      particleCount: 4,
+      angle: 60,
+      spread: 70,
+      origin: { x: 0 },
+      colors: ["#facc15", "#a78bfa"]
+    });
+    confetti({
+      particleCount: 4,
+      angle: 120,
+      spread: 70,
+      origin: { x: 1 },
+      colors: ["#facc15", "#a78bfa"]
+    });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  })();
+</script>
+{% endif %}
+{% if unlocked_now %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0"></script>
+<script>
+  const duration = 2000;
+  const end = Date.now() + duration;
+  const labels = {{ unlocked_now|safe }};
+  const colors = ["#facc15", "#a78bfa", "#38bdf8", "#4ade80"];
+
+  function shootConfetti() {
+    confetti({
+      particleCount: 6,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: colors
+    });
+  }
+
+  // Loop animation
+  (function frame() {
+    shootConfetti();
+    if (Date.now() < end) requestAnimationFrame(frame);
+  })();
+
+  // Toast for each new milestone
+  labels.forEach((label, i) => {
+    setTimeout(() => {
+      const div = document.createElement("div");
+      div.className = "toast";
+      div.innerHTML = `🎉 Achievement Unlocked: <strong>${label}</strong>`;
+      div.style.position = "fixed";
+      div.style.bottom = "20px";
+      div.style.right = "20px";
+      div.style.background = "#1e1b4b";
+      div.style.color = "#fff";
+      div.style.padding = "0.8rem 1.2rem";
+      div.style.borderRadius = "10px";
+      div.style.boxShadow = "0 0 12px rgba(124,58,237,0.6)";
+      div.style.zIndex = 9999;
+      div.style.opacity = 0;
+      div.style.transition = "opacity 0.6s ease";
+      document.body.appendChild(div);
+      setTimeout(() => (div.style.opacity = 1), 100);
+      setTimeout(() => (div.style.opacity = 0), 2800);
+      setTimeout(() => div.remove(), 3500);
+    }, i * 800);
+  });
+</script>
+{% endif %}
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".progress-inner").forEach(el => {
+    const target = el.style.width;
+    el.style.width = "0%";
+    setTimeout(() => el.style.width = target, 400);
+  });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Upgrade Complete{% endblock %}
+{% block content %}
+<div class="page">
+  <h1>{% if billing_is_mock %}Demo Upgrade Complete{% else %}Payment Successful{% endif %}</h1>
+  <p>
+    {% if billing_is_mock %}
+      Premium has been enabled in demo mode for this account. No card was charged and no real payment method was collected.
+    {% else %}
+      Your account has been upgraded to Premium. Enjoy full PredictMyGrade access.
+    {% endif %}
+  </p>
+  <a href="{% url 'core:dashboard' %}" class="btn primary">Go to Dashboard</a>
+</div>
+{% endblock %}

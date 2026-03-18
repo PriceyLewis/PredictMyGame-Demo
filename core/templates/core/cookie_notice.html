@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Cookie Notice{% endblock %}
+{% block content %}
+<section class="legal-page">
+  <header class="legal-hero">
+    <h1>Cookie Notice</h1>
+    <p>Last updated: {% now "j F Y" %}</p>
+  </header>
+
+  <article class="legal-card">
+    <h2>How We Use Cookies</h2>
+    <p>PredictMyGrade uses cookies and similar technologies to operate the website, remember your preferences, and understand how visitors use the service.</p>
+  </article>
+
+  <article class="legal-card">
+    <h2>Types of Cookies</h2>
+    <ul>
+      <li><strong>Essential cookies</strong> &mdash; required to log in, maintain sessions, and keep your workspace secure.</li>
+      <li><strong>Preference cookies</strong> &mdash; remember UI choices such as theme, layout, or AI persona.</li>
+      <li><strong>Analytics cookies</strong> &mdash; collect aggregated usage metrics so we can improve performance.</li>
+    </ul>
+  </article>
+
+  <article class="legal-card">
+    <h2>Managing Cookies</h2>
+    <p>You can disable or delete cookies in your browser settings at any time. Note that blocking essential cookies may prevent parts of PredictMyGrade from working properly.</p>
+    <p>For more information about how we handle data, please read our <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>.</p>
+  </article>
+</section>
+{% endblock %}

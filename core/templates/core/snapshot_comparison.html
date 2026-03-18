@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Snapshot Comparison{% endblock %}
+{% block content %}
+{% extends "core/dashboard_base.html" %}
+
+<!-- Update Summary (2025-02-11): Added snapshot comparison detail view with change breakdown and module impact list. -->
+
+{% block title %}Snapshot Comparison — PredictMyGrade
+{% endblock %}
+
+{% block content %}
+<div class="page" data-aos="fade-up">
+  <div class="header">
+    <div class="title">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>Snapshot Comparison</span>
+    </div>
+    <div class="header-actions">
+      <a href="{% url 'core:dashboard' %}" class="btn secondary">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Back to Dashboard</span>
+      </a>
+      <a href="{% url 'core:create_snapshot' %}" class="btn" data-trigger="snapshot">
+        <i class="fa-solid fa-camera"></i>
+        <span>Take Snapshot</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="card" data-aos="fade-up">
+    {% if has_snapshots %}
+      <div class="snapshot-overview">
+        <h3>Overall change</h3>
+        <p class="snapshot-delta {% if overall_change > 0 %}delta-positive{% elif overall_change < 0 %}delta-negative{% else %}delta-neutral{% endif %}">
+          {% if overall_change > 0 %}+{% endif %}{{ overall_change|floatformat:2 }}%
+          <small>since your first snapshot</small>
+        </p>
+      </div>
+      <div class="responsive-table">
+        <table class="snapshot-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Taken</th>
+              <th>Average</th>
+              <th>Change</th>
+              <th>Classification</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for snap in snapshots %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ snap.created_at }}</td>
+                <td>{{ snap.average|floatformat:2 }}%</td>
+                <td>
+                  {% if snap.change is not None %}
+                    <span class="delta-chip delta-{{ snap.direction }}">
+                      {% if snap.change > 0 %}+{% endif %}{{ snap.change|floatformat:2 }}%
+                    </span>
+                    <small class="delta-baseline">vs {{ snap.previous_average|default:"—" }}%</small>
+                  {% else %}
+                    <span class="delta-chip delta-neutral">Baseline</span>
+                  {% endif %}
+                </td>
+                <td>{{ snap.classification }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">No snapshots yet. Capture two or more snapshots to compare your progress.</p>
+    {% endif %}
+  </div>
+
+  <div class="card" data-aos="fade-up">
+    <h3>Module Impact Highlights</h3>
+    {% if comparison_data %}
+      <ul class="comparison-insights">
+        {% for item in comparison_data %}
+          <li class="{% if item.change > 0 %}positive{% elif item.change < 0 %}negative{% else %}neutral{% endif %}">
+            <span class="label">{{ item.label }}</span>
+            <span class="value">
+              {% if item.change > 0 %}+{% endif %}{{ item.change|floatformat:1 }}%
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No comparison data available yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% endblock %}

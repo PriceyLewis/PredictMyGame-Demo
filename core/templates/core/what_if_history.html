@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}📜 What-If History{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+      body {
+        background:#0f172a; color:#e5e7eb; font-family:'Inter',sans-serif;
+        padding:2rem;
+      }
+      .container {
+        max-width:960px; margin:auto; background:#1e293b;
+        padding:2rem; border-radius:12px;
+        box-shadow:0 4px 20px rgba(0,0,0,0.35);
+      }
+      h1 { color:#c4b5fd; margin-bottom:.8rem; }
+      table { width:100%; border-collapse:collapse; margin-top:1rem; }
+      th,td { padding:.8rem; border-bottom:1px solid #334155; text-align:left; }
+      th { color:#c4b5fd; font-weight:600; }
+      .badge { padding:.25rem .6rem; border-radius:6px; font-weight:600; color:#fff; font-size:.85rem; }
+      .badge.first{background:#10b981;} .badge.twoone{background:#3b82f6;}
+      .badge.twotwo{background:#f59e0b;} .badge.third{background:#ef4444;}
+      .badge.fail{background:#6b7280;}
+      canvas{margin-top:2rem; background:#0f172a; border-radius:10px; padding:1rem;}
+      .btn{background:#7c3aed; color:#fff; padding:.6rem 1.2rem; border-radius:8px;
+           text-decoration:none; display:inline-block; margin-top:1rem; transition:.25s;}
+      .btn:hover{background:#6d28d9;}
+      .btn-secondary{background:#475569; color:#fff; margin-left:.5rem;}
+    </style>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>📜 What-If History</h1>
+    <p>See your AI-powered predictions over time — hover over the graph for details!</p>
+
+    {% if history %}
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <canvas id="historyChart" height="110" style="flex:1 1 100%;"></canvas>
+        <div class="premium-feature export-cta {% if not has_premium_access %}premium-feature--locked{% endif %}" style="margin-top:1rem; text-align:right; width:100%;">
+          <div class="premium-feature__content">
+            {% if has_premium_access %}
+              <button id="downloadPNG" class="btn">⬇️ Download as PNG</button>
+              <button id="downloadPDF" class="btn btn-secondary">🧾 Export PDF</button>
+            {% endif %}
+          </div>
+          {% if not has_premium_access %}
+          <div class="premium-feature__overlay">
+            <div class="premium-feature__icon"><i class="fa-solid fa-download"></i></div>
+            <strong>Exporting charts is premium-only.</strong>
+            <p class="premium-feature__description">
+              Upgrade to download your What-If history as PNG or PDF.
+            </p>
+            <a href="{% url 'core:upgrade' %}" class="btn premium-feature__cta">Unlock exports</a>
+          </div>
+          {% endif %}
+        </div>
+</div>
+
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Predicted Avg</th><th>Classification</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          {% for h in history %}
+          <tr>
+            <td>{{ h.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ h.predicted_average }}%</td>
+            <td>
+              {% if h.classification == "First" %}
+                <span class="badge first">🎯 First</span>
+              {% elif h.classification == "Upper Second (2:1)" %}
+                <span class="badge twoone">💪 2:1</span>
+              {% elif h.classification == "Lower Second (2:2)" %}
+                <span class="badge twotwo">📈 2:2</span>
+              {% elif h.classification == "Third" %}
+                <span class="badge third">⚠️ Third</span>
+              {% else %}
+                <span class="badge fail">❌ Fail</span>
+              {% endif %}
+            </td>
+            <td>{{ h.notes|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No saved simulations yet. Run your first What-If prediction to begin tracking.</p>
+    {% endif %}
+
+    <a href="{% url 'core:what_if_simulation' %}" class="btn">⬅ Back to Simulator</a>
+  </div>
+
+  {% if history %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+  const ctx = document.getElementById("historyChart").getContext("2d");
+  const chart = new Chart(ctx,{
+    type:"line",
+    data:{
+      labels:{{ chart_labels|safe }},
+      datasets:[{
+        label:"Predicted Average (%)",
+        data:{{ chart_values|safe }},
+        borderColor:"#7c3aed",
+        backgroundColor:"rgba(124,58,237,0.2)",
+        fill:true,
+        tension:0.35,
+        pointRadius:6,
+        pointHoverRadius:9,
+        pointBackgroundColor:function(ctx){
+          const v=ctx.raw;
+          if(v>=70)return"#10b981";
+          if(v>=60)return"#3b82f6";
+          if(v>=50)return"#f59e0b";
+          if(v>=40)return"#ef4444";
+          return"#6b7280";
+        },
+        borderWidth:3,
+      }]
+    },
+    options:{
+      scales:{
+        y:{beginAtZero:true,suggestedMax:100,
+           title:{display:true,text:"Average (%)",color:"#cbd5e1"},
+           ticks:{color:"#e5e7eb"},grid:{color:"rgba(255,255,255,0.05)"}},
+        x:{title:{display:true,text:"Simulation Date",color:"#cbd5e1"},
+           ticks:{color:"#e5e7eb"},grid:{color:"rgba(255,255,255,0.05)"}}
+      },
+      plugins:{
+        tooltip:{
+          backgroundColor:"#1f2937",titleColor:"#fff",bodyColor:"#cbd5e1",
+          callbacks:{
+            afterBody:function(ctx){
+              const v=ctx[0].raw;
+              if(v>=70)return"Classification: First";
+              if(v>=60)return"Classification: 2:1";
+              if(v>=50)return"Classification: 2:2";
+              if(v>=40)return"Classification: Third";
+              return"Classification: Fail";
+            }
+          }
+        },
+        legend:{labels:{color:"#e5e7eb"}},
+        title:{display:true,text:"Performance Progress Timeline",
+               color:"#cbd5e1",font:{size:16,weight:'bold'}}
+      }
+    }
+  });
+
+  // PNG download
+  document.getElementById("downloadPNG").addEventListener("click",()=>{
+    const link=document.createElement("a");
+    link.download="what_if_history.png";
+    link.href=chart.toBase64Image();
+    link.click();
+  });
+
+  // PDF export
+  document.getElementById("downloadPDF").addEventListener("click",()=>{
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:"landscape"});
+    pdf.text("PredictMyGrade What-If History Timeline",10,10);
+    pdf.addImage(chart.toBase64Image(),"PNG",10,20,270,120);
+    pdf.save("what_if_history.pdf");
+  });
+  </script>
+  {% endif %}
+{% endblock %}

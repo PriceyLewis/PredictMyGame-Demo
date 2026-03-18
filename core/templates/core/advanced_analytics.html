@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Advanced Analytics{% endblock %}
+{% block body_attrs %} class="theme-{{ request.session.theme|default:'dark' }}"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+      document.addEventListener("DOMContentLoaded", () => AOS.init({ duration: 800, once: true }));
+    </script>
+{% endblock %}
+{% block content %}
+<div class="page" data-aos="fade-up">
+    <div class="header">
+      <div class="title">📊 Advanced Analytics (Admin)</div>
+      <a href="{% url 'core:dashboard' %}" class="btn secondary">← Back</a>
+    </div>
+
+    <div class="card">
+      <h2>Global Metrics</h2>
+      <ul>
+        <li>🧍 Total Users: {{ user_count }}</li>
+        <li>📈 Average Grade: {{ avg_grade }}%</li>
+        <li>📚 Total Modules Recorded: {{ modules|length }}</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Overall Grade Distribution</h2>
+      <canvas id="adminChart" height="140"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('adminChart');
+    const data = {
+      labels: [{% for m in modules %}'{{ m.name }}',{% endfor %}],
+      datasets: [{
+        label: 'Module Grades (%)',
+        data: [{% for m in modules %}{{ m.grade_percent }},{% endfor %}],
+        backgroundColor: 'rgba(167,139,250,0.6)',
+        borderColor: '#7c3aed',
+        borderWidth: 1
+      }]
+    };
+    new Chart(ctx, { type: 'bar', data, options: { scales: { y: { beginAtZero: true } } }});
+  </script>
+{% endblock %}

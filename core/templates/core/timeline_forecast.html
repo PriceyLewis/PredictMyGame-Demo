@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Timeline Forecast – PredictMyGrade Premium{% endblock %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4">Timeline Forecast (Premium)</h2>
+
+  {% if forecast %}
+  <div class="card shadow p-4 mx-auto" style="max-width:600px;">
+    <h5>Current Average:</h5>
+    <h3>{{ forecast.current }}%</h3>
+    <h5 class="mt-3">Predicted End-of-Year Average:</h5>
+    <h3>{{ forecast.projected }}%</h3>
+    <h5 class="mt-3">Projected Classification:</h5>
+    <h3>{{ forecast.classification }}</h3>
+    <p class="mt-3 text-muted">Predictions are estimated using trend analysis.</p>
+  </div>
+  {% else %}
+  <div class="alert alert-warning text-center">
+    Add some modules first to generate a forecast.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Prediction{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <style>
+      :root{--bg:#0f0b1a;--bg-soft:#151027;--card:#1b1433;--card-2:#201a3f;
+        --text:#f4f2ff;--muted:#cfc8ffcc;--brand:#7c3aed;--brand-2:#a78bfa;--border:#2a214b;}
+      html,body{background:var(--bg);color:var(--text);font-family:Inter,sans-serif;}
+      .page{max-width:800px;margin:0 auto;padding:1.5rem;}
+      .card{background:linear-gradient(180deg,var(--card),var(--card-2));border:1px solid var(--border);
+        border-radius:16px;padding:1.2rem;margin-top:1rem;box-shadow:0 6px 24px rgba(124,58,237,.15);}
+      label{display:block;margin-top:.6rem;color:var(--brand-2);font-weight:600;}
+      input{width:100%;padding:.6rem .7rem;border-radius:8px;background:var(--bg-soft);
+        border:1px solid var(--border);color:var(--text);}
+      .btn{background:linear-gradient(135deg,var(--brand),var(--brand-2));
+        color:#fff;padding:.6rem 1rem;border-radius:.7rem;border:none;cursor:pointer;
+        font-weight:700;transition:.3s;}
+      .btn.secondary{background:#2a214b;border:1px solid var(--border);}
+      .btn:hover{filter:brightness(1.1);}
+      .muted{color:var(--muted);}
+    </style>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+{% endblock %}
+{% block content %}
+<div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}">
+  <div class="page premium-feature__content">
+  <div class="header-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;">
+    <div class="title" style="font-size:1.6rem;font-weight:800;color:var(--brand-2);">🔮 AI Prediction</div>
+    <a href="{% url 'core:dashboard' %}" class="btn secondary">⬅ Back</a>
+  </div>
+
+  <div class="card">
+    <h3>Enter your current data</h3>
+    <form id="aiForm">
+      {% csrf_token %}
+      <label>Average so far (%)</label>
+      <input type="number" step="0.1" min="0" max="100" name="avg_so_far" required>
+
+      <label>Credits completed</label>
+      <input type="number" step="1" min="0" max="120" name="credits_done" required>
+
+      <label>Module difficulty index (0 – 1)</label>
+      <input type="number" step="0.01" min="0" max="1" name="difficulty_index" required>
+
+      <label>Performance variance (0 – 1)</label>
+      <input type="number" step="0.01" min="0" max="1" name="performance_variance" required>
+
+      <label>Engagement score (0 – 1)</label>
+      <input type="number" step="0.01" min="0" max="1" name="engagement_score" required>
+
+      <button class="btn" type="submit" style="margin-top:1rem;">Predict Final Average</button>
+    </form>
+
+    <div id="resultBox" class="muted" style="margin-top:1rem;">Fill the form and click <b>Predict</b>.</div>
+    <p class="muted small" role="note" style="margin-top:.4rem;">
+      Predictions are estimates based on your inputs and not guaranteed.
+    </p>
+    <button id="savePrediction" class="btn secondary" style="display:none;margin-top:.8rem;">💾 Save Prediction</button>
+  </div>
+  {% if not has_premium_access %}
+  <div class="premium-feature__overlay">
+    <div class="premium-feature__icon"><i class="fa-solid fa-chart-line"></i></div>
+    <strong>AI predictions are premium-only.</strong>
+    <p class="premium-feature__description">
+      Upgrade to run unlimited personalised predictions and save them for later.
+    </p>
+    <a href="{% url 'core:upgrade' %}" class="btn premium-feature__cta">Unlock premium predictions</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+(function(){
+  const form=document.getElementById('aiForm');
+  const result=document.getElementById('resultBox');
+  const saveBtn=document.getElementById('savePrediction');
+  let lastPrediction=null;
+
+  function showToast(msg,bg="linear-gradient(90deg,#7c3aed,#a78bfa)"){
+    Toastify({text:msg,duration:3000,gravity:"top",position:"right",style:{background:bg}}).showToast();
+  }
+
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const data=Object.fromEntries(new FormData(form).entries());
+    try{
+      const res=await fetch("{% url 'core:predict_final_average' %}",{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body:JSON.stringify(data)
+      });
+      const out=await res.json();
+      if(out.error) throw new Error(out.error);
+      const predictedClass = out.predicted_classification || out.classification || 'Unknown';
+      const confidenceValue = Number.isFinite(out.confidence) ? out.confidence : Number(out.confidence);
+      const confidenceLabel = Number.isFinite(confidenceValue)
+        ? `${confidenceValue}%`
+        : 'calculating…';
+      result.innerHTML=`Predicted Final Average: <strong>${out.predicted_average}%</strong><br>
+        Classification: <strong>${predictedClass}</strong><br>
+        Confidence: <strong>${confidenceLabel}</strong>`;
+      result.classList.remove('muted');
+      lastPrediction={...data,...out};
+      saveBtn.style.display='inline-block';
+      showToast('✅ Prediction complete');
+    }catch(err){
+      showToast('⚠️ '+err.message,'linear-gradient(90deg,#ef4444,#7c3aed)');
+    }
+  });
+
+  saveBtn.addEventListener('click',async()=>{
+    if(!lastPrediction){showToast('Run a prediction first.');return;}
+    try{
+      const res=await fetch("{% url 'core:save_prediction' %}",{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body:JSON.stringify(lastPrediction)
+      });
+      const out=await res.json();
+      if(out.ok){showToast('💾 Prediction saved successfully!');}
+      else{throw new Error(out.error||'Save failed');}
+    }catch(err){
+      showToast('⚠️ '+err.message,'linear-gradient(90deg,#ef4444,#7c3aed)');
+    }
+  });
+})();
+</script>
+{% endblock %}

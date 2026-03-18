@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Start Prediction{% endblock %}
+{% block content %}
+<main class="start-prediction">
+  <section class="prediction-hero">
+    <div class="prediction-hero__content">
+      <p class="prediction-eyebrow">Academic forecasting</p>
+      <h1>See your future, then shape it</h1>
+      <p>
+        PredictMyGrade blends your performance, timetable, and syllabus checkpoints into one clear forecast. Know what to lean into and what to celebrate next.
+      </p>
+      <div class="prediction-hero__badges" aria-label="Highlights">
+        <span class="prediction-hero__badge">Weekly AI model refresh</span>
+        <span class="prediction-hero__badge">Bank-level privacy</span>
+        <span class="prediction-hero__badge">Syllabus &amp; calendar sync</span>
+      </div>
+      <div class="prediction-hero__ctas">
+        <a class="btn" href="/predict/degree/">Start my degree forecast</a>
+        <a class="btn ghost" href="#prediction-options">View all paths</a>
+      </div>
+    </div>
+    <div class="prediction-hero__panel" aria-hidden="true">
+      <div class="prediction-panel__card">
+        <span>Projected grade</span>
+        <strong>Upper 2:1</strong>
+        <p>Based on your current GPA, assignments, and study rhythm.</p>
+      </div>
+      <div class="prediction-panel__stats">
+        <div>
+          <span>Confidence</span>
+          <strong>92%</strong>
+        </div>
+        <div>
+          <span>Time saved</span>
+          <strong>12 hrs/week</strong>
+        </div>
+      </div>
+      <div class="prediction-panel__progress" aria-label="Roadmap progress">
+        <div class="prediction-panel__progress-label">Roadmap progress</div>
+        <div class="prediction-panel__progress-track">
+          <span class="prediction-panel__progress-fill" style="width: 78%;"></span>
+        </div>
+        <small>Next milestone locks in 3 days</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="prediction-options" id="prediction-options">
+    <div class="prediction-options__header">
+      <p class="prediction-eyebrow">Choose your level</p>
+      <h2>Which prediction suits your journey?</h2>
+      <p>Each experience is tailored to the exams, credits, and subjects you care about most.</p>
+    </div>
+    <div class="prediction-grid">
+      <a class="prediction-card" href="/predict/degree/">
+        <div class="prediction-card__icon" aria-hidden="true">🎓</div>
+        <h3>University</h3>
+        <p>Forecast degree classifications and get a roadmap for the rest of your modules.</p>
+        <span>Modules · GPA trends · Study plan</span>
+      </a>
+      <a class="prediction-card" href="/predict/college/">
+        <div class="prediction-card__icon" aria-hidden="true">📘</div>
+        <h3>College / Sixth Form</h3>
+        <p>Predict A-Level or BTEC outcomes with subject-level insights.</p>
+        <span>Subjects · Mock exams · Revision guidance</span>
+      </a>
+      <a class="prediction-card" href="{% url 'core:gcse' %}">
+        <div class="prediction-card__icon" aria-hidden="true">📝</div>
+        <h3>GCSE</h3>
+        <p>Track progress across all subjects and stay on target for exam season.</p>
+        <span>Topic tracking · Homework radar · Revision sprints</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="prediction-insights">
+    <article class="prediction-insights__column">
+      <h3>How PredictMyGrade works</h3>
+      <ol>
+        <li>Share your current grades, mocks, and study routine.</li>
+        <li>We blend your inputs with curriculum benchmarks and our ML forecasts.</li>
+        <li>Receive tailored milestones, nudges, and comparison notes for every subject.</li>
+      </ol>
+    </article>
+    <article class="prediction-insights__column">
+      <h3>Why students stay</h3>
+      <ul>
+        <li>Friendly dashboards that show progress without the noise.</li>
+        <li>Privacy-first workflows keep your data safe on every report.</li>
+        <li>Actionable next steps—set reminders, plan bursts, and celebrate wins.</li>
+      </ul>
+    </article>
+  </section>
+</main>
+{% endblock %}

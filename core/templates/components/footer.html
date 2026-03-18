@@ -1,0 +1,65 @@
+<footer class="footer" data-aos="fade-up">
+  <div class="footer-inner">
+    <div class="footer-left">
+      © 2025 <strong>BrightTrail Studio</strong> — PredictMyGrade
+    </div>
+    <div class="footer-right">
+      <a href="https://brighttrailstudio.com" target="_blank" class="footer-link">🌐 Visit Studio</a>
+      <button id="supportBtn" class="btn secondary small">💌 Contact Support</button>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("supportBtn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        Toastify({
+          text: "📧 Contact us at support@brighttrailstudio.com",
+          duration: 5000,
+          gravity: "bottom",
+          position: "right",
+          style: {
+            background: "linear-gradient(135deg, #7c3aed, #a78bfa)",
+            color: "#fff",
+            borderRadius: "8px",
+          },
+        }).showToast();
+      });
+    }
+  });
+</script>
+
+<style>
+.footer {
+  background: var(--bg-soft);
+  color: var(--muted);
+  padding: 1rem 2rem;
+  margin-top: 2rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.footer-link {
+  color: var(--brand-2);
+  text-decoration: none;
+  margin-right: 1rem;
+}
+.footer-link:hover {
+  text-decoration: underline;
+}
+.btn.small {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.8rem;
+}
+</style>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Help & Guidance{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/levels.css' %}">
+{% endblock %}
+{% block content %}
+<div class="level-dashboard">
+  <div class="level-header">
+    <div>
+      <h1>Help & guidance</h1>
+      <p class="muted">Quick tips for getting started and making the most of PredictMyGrade.</p>
+    </div>
+    <div class="badge-ring">
+      <span>Status</span>
+      <strong>{% if is_premium %}Premium{% else %}Free{% endif %}</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Getting started</h3>
+    <ul>
+      <li><strong>Add modules:</strong> Visit the Modules page and click “Add module.” Provide the module name, credits, and your latest grade.</li>
+      <li><strong>View charts:</strong> Dashboards update automatically when you log new modules or snapshots.</li>
+      <li><strong>Use insights:</strong> Visit <a href="{% url 'core:smart_insights' %}">Smart Insights</a> for personalised study nudges.</li>
+      <li><strong>Export or backup:</strong> Use the export tools to download CSVs or store backups.</li>
+      <li><strong>Import data:</strong> Upload CSV files to bulk add module data instantly.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Premium features</h3>
+    {% if is_premium %}
+      <p>You currently have <strong>Premium</strong> access—enjoy advanced predictions, Smart Study Insights, and historical comparisons.</p>
+      <a class="btn secondary" href="{% url 'core:manage_subscription' %}">Manage subscription</a>
+    {% else %}
+      <p>Upgrade to <a href="{% url 'core:upgrade' %}">Premium</a> to unlock Smart Study Insights, timeline forecasts, and automatic backups.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

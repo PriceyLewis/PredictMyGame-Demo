@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Expiring Billing{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1>Billing renewals & trials ending soon</h1>
+  <p class="muted">Next 14 days &middot; refresh after opening billing pages to pull latest renewal dates.</p>
+
+  <h2 class="h5 mt-4">Premium renewals</h2>
+  {% if expiring_subs %}
+    <table class="table table-striped">
+      <thead>
+        <tr><th>User</th><th>Email</th><th>Days left</th><th>Renews</th><th>Cancel at period end</th></tr>
+      </thead>
+      <tbody>
+        {% for item in expiring_subs %}
+          <tr>
+            <td>{{ item.user.username }}</td>
+            <td>{{ item.email|default:"n/a" }}</td>
+            <td>{{ item.days_left|default:"?" }}</td>
+            <td>{% if item.plan_end %}{{ item.plan_end|date:"d M Y H:i" }}{% else %}n/a{% endif %}</td>
+            <td>{% if item.cancel_at_period_end %}Yes{% else %}No{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No premium renewals ending in the next 14 days.</p>
+  {% endif %}
+
+  <h2 class="h5 mt-4">Trials ending</h2>
+  {% if expiring_trials %}
+    <table class="table table-striped">
+      <thead>
+        <tr><th>User</th><th>Email</th><th>Days left</th><th>Trial ends</th></tr>
+      </thead>
+      <tbody>
+        {% for item in expiring_trials %}
+          <tr>
+            <td>{{ item.user.username }}</td>
+            <td>{{ item.email|default:"n/a" }}</td>
+            <td>{{ item.days_left|default:"?" }}</td>
+            <td>{% if item.plan_end %}{{ item.plan_end|date:"d M Y H:i" }}{% else %}n/a{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No trials ending in the next 14 days.</p>
+  {% endif %}
+</div>
+{% endblock %}

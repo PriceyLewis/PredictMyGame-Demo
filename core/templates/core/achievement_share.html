@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ display_name }} unlocked {{ achievement.title }}{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background: radial-gradient(circle at top, #4338ca, #0f172a 65%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e2e8f0;
+      }
+      .card {
+        background: rgba(15, 23, 42, 0.85);
+        padding: 2.5rem;
+        border-radius: 24px;
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.55);
+        max-width: 480px;
+        text-align: center;
+        backdrop-filter: blur(12px);
+      }
+      .emoji {
+        font-size: 3rem;
+      }
+      .title {
+        margin: 1rem 0 0.5rem;
+        font-size: 1.8rem;
+        font-weight: 700;
+      }
+      .description {
+        font-size: 1rem;
+        color: #cbd5f5;
+        margin-bottom: 1.6rem;
+      }
+      .footer {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin-top: 2rem;
+      }
+      a {
+        color: #c7d2fe;
+        text-decoration: none;
+      }
+    </style>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="emoji">{{ emoji|default:"🌟" }}</div>
+    <div class="title">{{ display_name }} unlocked {{ achievement.title }}</div>
+    <p class="description">{{ achievement.description }}</p>
+    <p>Unlocked {{ unlocked_at|date:"j M Y" }}</p>
+    <div class="footer">Shared via <a href="/">PredictMyGrade</a></div>
+  </div>
+{% endblock %}

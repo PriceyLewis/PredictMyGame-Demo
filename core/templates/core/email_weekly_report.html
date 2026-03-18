@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f4f6fa; color: #333; }
+    .card { background: white; padding: 20px; border-radius: 12px; max-width: 600px; margin: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    h2 { color: #004aad; text-align: center; }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    th, td { padding: 10px 0; text-align: left; border-bottom: 1px solid #eee; }
+    .footer { text-align: center; font-size: 13px; color: #777; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📊 PredictMyGrade Weekly Analytics Report</h2>
+    <p style="text-align:center;">Week ending {{ date }}</p>
+    <table>
+      <tr><th>Bug Reports</th><td>{{ bug_reports }}</td></tr>
+      <tr><th>Support Messages</th><td>{{ support_msgs }}</td></tr>
+      <tr><th>Data Exports</th><td>{{ exports }}</td></tr>
+      <tr><th>Account Deletions</th><td>{{ deletions }}</td></tr>
+      <tr><th>Premium Users</th><td>{{ premium_users }}</td></tr>
+      <tr><th>Active Users (7 days)</th><td>{{ active_users }}</td></tr>
+    </table>
+    <div class="footer">Generated automatically by PredictMyGrade Admin System</div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Prediction History{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <style>
+      :root{--bg:#0f0b1a;--bg-soft:#151027;--card:#1b1433;--card-2:#201a3f;
+        --text:#f4f2ff;--muted:#cfc8ffcc;--brand:#7c3aed;--brand-2:#a78bfa;--border:#2a214b;}
+      html,body{background:var(--bg);color:var(--text);font-family:Inter,sans-serif;}
+      .page{max-width:1000px;margin:0 auto;padding:1.5rem;}
+      .card{background:linear-gradient(180deg,var(--card),var(--card-2));border:1px solid var(--border);
+        border-radius:16px;padding:1.2rem;margin-top:1rem;box-shadow:0 6px 24px rgba(124,58,237,.15);}
+      table{width:100%;border-collapse:collapse;margin-top:.8rem;}
+      th,td{padding:.6rem .8rem;text-align:left;border-bottom:1px solid var(--border);}
+      th{color:var(--brand-2);font-weight:700;}
+      tr:hover td{background:rgba(124,58,237,.08);}
+      .btn{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;padding:.5rem 1rem;
+        border-radius:.7rem;border:none;cursor:pointer;font-weight:700;transition:.3s;}
+      .btn.secondary{background:#2a214b;border:1px solid var(--border);}
+      .btn:hover{filter:brightness(1.1);}
+      .muted{color:var(--muted);}
+      .compare-box{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.6rem;}
+      select{background:var(--bg-soft);color:var(--text);border:1px solid var(--border);border-radius:.5rem;
+        padding:.4rem .6rem;}
+    </style>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<div class="page">
+  <div class="header-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;">
+    <div class="title" style="font-size:1.6rem;font-weight:800;color:var(--brand-2);">📜 AI Prediction History</div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <a href="{% url 'core:ai_prediction' %}" class="btn secondary">⬅ Back</a>
+      {% if history %}
+        <a href="{% url 'core:export_prediction_csv' %}" class="btn">⬇ Export CSV</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if history %}
+  <div class="card">
+    <h3>Previous Predictions</h3>
+    <table>
+      <tr>
+        <th>Select</th>
+        <th>Date</th>
+        <th>Avg So Far</th>
+        <th>Credits</th>
+        <th>Difficulty</th>
+        <th>Variance</th>
+        <th>Engagement</th>
+        <th>Predicted Avg</th>
+        <th>Classification</th>
+        <th>AI Insight</th>
+      </tr>
+      {% for h in history %}
+      <tr>
+        <td><input type="checkbox" class="compareCheck" value="{{ h.id }}"></td>
+        <td>{{ h.created_at|date:"M d, Y" }}</td>
+        <td>{{ h.avg_so_far|floatformat:1 }}</td>
+        <td>{{ h.credits_done|floatformat:0 }}</td>
+        <td>{{ h.difficulty_index|floatformat:2 }}</td>
+        <td>{{ h.performance_variance|floatformat:2 }}</td>
+        <td>{{ h.engagement_score|floatformat:2 }}</td>
+        <td>{{ h.predicted_average|floatformat:2 }}%</td>
+        <td>{{ h.predicted_classification }}</td>
+        <td style="font-size:.85rem;color:var(--muted);">{{ h.ai_insight|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <h3>📈 Prediction Trend</h3>
+    <canvas id="predictionChart" height="100"></canvas>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <h3>🔍 Compare Predictions</h3>
+    <p class="muted">Select up to 3 predictions above and click compare to visualise differences in engagement, difficulty, and variance.</p>
+    <div class="compare-box">
+      <button id="compareBtn" class="btn">Compare Selected</button>
+    </div>
+    <canvas id="compareChart" height="130" style="margin-top:1rem;"></canvas>
+  </div>
+  {% else %}
+  <div class="card">
+    <p class="muted">No predictions saved yet. Run one on the <a href="{% url 'core:ai_prediction' %}">AI Prediction page</a>.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+{% if history %}
+const ctx=document.getElementById('predictionChart').getContext('2d');
+new Chart(ctx,{
+  type:'line',
+  data:{
+    labels:[{% for h in history %}"{{ h.created_at|date:'M d' }}",{% endfor %}],
+    datasets:[{
+      label:'Predicted Average (%)',
+      data:[{% for h in history %}{{ h.predicted_average }},{% endfor %}],
+      borderColor:'#a78bfa',backgroundColor:'rgba(124,58,237,0.15)',borderWidth:2,fill:true,tension:0.35
+    }]
+  },
+  options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}
+});
+
+// === Compare Chart + AI Insight ===
+const compareBtn=document.getElementById('compareBtn');
+const insightBox=document.createElement('div');
+insightBox.className='muted';
+insightBox.style.marginTop='1rem';
+document.querySelector('#compareChart').after(insightBox);
+
+compareBtn.addEventListener('click',()=>{
+  const selected=[...document.querySelectorAll('.compareCheck:checked')].map(cb=>cb.closest('tr'));
+  if(selected.length===0){
+    Toastify({text:"Select at least one prediction",duration:2500,gravity:"top",position:"right"}).showToast();
+    return;
+  }
+  if(selected.length>3){
+    Toastify({text:"Please select up to 3 only",duration:2500,gravity:"top",position:"right"}).showToast();
+    return;
+  }
+
+  const labels=["Difficulty","Variance","Engagement"];
+  const datasets=selected.map((row,i)=>{
+    const vals=[
+      parseFloat(row.children[4].innerText),
+      parseFloat(row.children[5].innerText),
+      parseFloat(row.children[6].innerText)
+    ];
+    const color=['#7c3aed','#22c55e','#f59e0b'][i];
+    return {
+      label: row.children[1].innerText, // date
+      data: vals,
+      borderColor: color,
+      backgroundColor: color+"33",
+      fill:true
+    };
+  });
+
+  // Draw radar chart
+  const cctx=document.getElementById('compareChart').getContext('2d');
+  if(window.compareChart){window.compareChart.destroy();}
+  window.compareChart=new Chart(cctx,{
+    type:'radar',
+    data:{labels,datasets},
+    options:{scales:{r:{beginAtZero:true,max:1}},
+             plugins:{legend:{labels:{color:'#e9e3ff'}}}}
+  });
+
+  // === AI INSIGHT SUMMARY ===
+  const getAvg=(arr)=>arr.reduce((a,b)=>a+b,0)/arr.length;
+  const diffVals=selected.map(r=>parseFloat(r.children[4].innerText));
+  const varVals=selected.map(r=>parseFloat(r.children[5].innerText));
+  const engVals=selected.map(r=>parseFloat(r.children[6].innerText));
+  const predVals=selected.map(r=>parseFloat(r.children[7].innerText));
+
+  const diffAvg=getAvg(diffVals);
+  const varAvg=getAvg(varVals);
+  const engAvg=getAvg(engVals);
+  const predAvg=getAvg(predVals);
+
+  let insights=[];
+  if(engAvg > 0.7) insights.push("Higher engagement is strongly associated with better predicted outcomes.");
+  else if(engAvg < 0.4) insights.push("Low engagement scores appear to limit performance.");
+  else insights.push("Moderate engagement yields average results; improving study engagement may raise your final grade.");
+
+  if(diffAvg > 0.6 && predAvg >= 65)
+    insights.push("Despite higher module difficulty, you maintain good performance — strong indicator of adaptability.");
+  else if(diffAvg > 0.6 && predAvg < 60)
+    insights.push("High difficulty levels may be suppressing your predicted average; consider balancing your module load.");
+  else if(diffAvg < 0.3)
+    insights.push("Lower difficulty modules correspond to stable predicted grades.");
+
+  if(varAvg > 0.5)
+    insights.push("Performance variance is relatively high; focus on consistency across assessments.");
+  else
+    insights.push("Stable performance with low variance supports reliable grade predictions.");
+
+  insightBox.innerHTML=`<h4 style="color:var(--brand-2);margin-bottom:.4rem;">🤖 AI Insights</h4><ul style="margin-left:1rem;">${insights.map(i=>"<li>"+i+"</li>").join("")}</ul>`;
+});
+{% endif %}
+</script>
+{% endblock %}

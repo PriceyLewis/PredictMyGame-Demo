@@ -1,0 +1,1107 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}College Dashboard{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/levels.css' %}">
+
+<style>
+  .college-dashboard {
+    position: relative;
+  }
+  .college-dashboard .level-hero {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(10, 10, 35, 0.95));
+    border-radius: 20px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.2rem;
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    box-shadow: 0 25px 60px rgba(10, 10, 30, 0.6);
+  }
+  .college-dashboard .level-hero h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.4rem;
+  }
+  .college-dashboard .hero-copy .eyebrow {
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.4rem;
+  }
+  .college-dashboard .hero-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .hero-highlight {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .hero-actions {
+    margin-bottom: 1.5rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(79, 70, 229, 0.3);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    align-items: center;
+  }
+  .insight-panel {
+    margin-bottom: 1.2rem;
+    padding: 1rem 1.2rem;
+    border-radius: 16px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+  .insight-panel strong {
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .college-dashboard .hero-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .hero-score {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0.2rem 0;
+  }
+  .offer-toolbar {
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+  .offer-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .offer-pill {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    color: #f3f4ff;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .offer-pill.active {
+    border-color: rgba(56, 189, 248, 0.9);
+    background: rgba(56, 189, 248, 0.18);
+  }
+  .offer-pill .pill-count {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+  }
+  .offer-alert {
+    font-size: 0.85rem;
+    color: #e0f2fe;
+    flex: 1;
+    min-width: 220px;
+  }
+  @media (max-width: 640px) {
+    .college-dashboard .level-hero {
+      grid-template-columns: 1fr;
+    }
+    .hero-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="level-dashboard college-dashboard">
+  <div class="level-hero college-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">College progress hub</p>
+      <h1>College Progress Hub</h1>
+      <p class="muted">Monitor A-Level and BTEC performance, readiness milestones, and application progress in one place.</p>
+      <div class="hero-highlight">
+        <strong>Admissions focus</strong>
+        <p>Maintaining {{ readiness_score|default:"0" }}% readiness keeps every new mock score aligned with your chosen path.</p>
+      </div>
+    </div>
+    <div class="hero-aside">
+      <div class="badge-ring hero-card">
+        <span>Readiness</span>
+        <strong>{{ readiness_score }}%</strong>
+      </div>
+      {% if best_module %}
+        <div class="hero-card">
+          <span>Top module</span>
+          <div class="hero-score">{{ best_module.grade }}%</div>
+          <p class="muted" style="margin:0;">{{ best_module.name }}</p>
+        </div>
+      {% endif %}
+      {% if lowest_module %}
+        <div class="hero-card">
+          <span>Focus module</span>
+          <div class="hero-score">{{ lowest_module.grade }}%</div>
+          <p class="muted" style="margin:0;">{{ lowest_module.name }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="hero-actions">
+    <div class="toolbar-meta">
+      <strong>{{ module_count|default:0 }}</strong> modules logged &bull; {{ credits_total|default:0 }} credits captured &bull; Readiness {{ readiness_score|default:0 }}%
+      <div>Keep logging assessments so admissions insights stay tightly aligned with your latest performance.</div>
+    </div>
+    <div class="level-actions">
+      <a href="{% url 'core:module_add' %}?level=college" class="level-btn">Log module</a>
+      <a href="{% url 'core:modules_list' %}" class="level-btn secondary">Manage modules</a>
+      <a href="{% url 'core:compare_levels' %}" class="level-btn outline">Compare levels</a>
+    </div>
+  </div>
+
+  <div class="insight-panel">
+    <strong>Admissions insight</strong>
+    {% if ucas_summary.potential_gain %}
+      <p>Hitting your targets could add <strong>+{{ ucas_summary.potential_gain }} UCAS pts</strong>. Keep current efforts on the modules below the 60% focus line.</p>
+    {% else %}
+      <p>Stay steady with the current lineup of modules — consistent inputs build trust with your chosen offers.</p>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-4 hero-metrics">
+    <div class="card">
+      <h3>Current average</h3>
+      <div class="big-number">{{ average|default:"0.0" }}%</div>
+      <p class="muted">
+        {% if trend_delta > 0 %}
+          Trend <span class="trend-positive">+{{ trend_delta }} pts</span> vs last snapshot.
+        {% elif trend_delta < 0 %}
+          Trend <span class="trend-negative">{{ trend_delta }} pts</span> vs last snapshot.
+        {% else %}
+          Trend steady across recent snapshots.
+        {% endif %}
+      </p>
+    </div>
+    <div class="card">
+      <h3>Modules tracked</h3>
+      <div class="big-number">{{ module_count }}</div>
+      <p class="muted">Outstanding credits recorded: {{ credits_total }} / 120.</p>
+    </div>
+    <div class="card">
+      <h3>Pathway completion</h3>
+      <div class="big-number">{{ pathway_completion }}%</div>
+      <p class="muted">Log new assessments promptly to stay on pace for UCAS offers.</p>
+    </div>
+    <div class="card">
+      <h3>Performance highlights</h3>
+      {% if best_module %}
+        <p class="muted">
+          Best: <strong>{{ best_module.name }}</strong> ({{ best_module.grade }}%).
+          {% if lowest_module %} Focus: {{ lowest_module.name }} ({{ lowest_module.grade }}%).{% endif %}
+        </p>
+      {% else %}
+        <p class="muted">Add module grades to unlock insights.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="section-title">Admissions planning</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>UCAS points calculator</h3>
+      <p class="card-subtitle">Track how your recorded grades translate into UCAS tariff points.</p>
+      <div class="offer-toolbar">
+        <div class="offer-pill-group">
+          <button type="button" class="offer-pill active" data-offer-filter="all" data-filter-label="All offers">
+            All <span class="pill-count">{{ offer_tracker|length }}</span>
+          </button>
+          {% for item in offer_status_summary %}
+          <button type="button" class="offer-pill" data-offer-filter="{{ item.value }}" data-filter-label="{{ item.label }}">
+            {{ item.label }} <span class="pill-count">{{ item.count }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        <div
+          class="offer-alert"
+          id="offerAlertMessage"
+          data-default-text="{% if offers_attention %}{{ offers_attention }} offer{% if offers_attention != 1 %}s{% endif %} need attention — review deltas above zero.{% else %}All tracked offers are currently at or above target.{% endif %}"
+        >
+          {% if offers_attention %}
+            {{ offers_attention }} offer{% if offers_attention != 1 %}s{% endif %} need attention — review deltas above zero.
+          {% else %}
+            All tracked offers are currently at or above target.
+          {% endif %}
+        </div>
+      </div>
+      <table class="table" id="offerTrackerTable">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Recorded</th>
+            <th>Predicted</th>
+            <th>Tariff</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in ucas_summary.breakdown %}
+          <tr>
+            <td>
+              <strong>{{ row.name }}</strong><br>
+              <span class="muted">{{ row.level }}</span>
+            </td>
+            <td>
+              {{ row.grade }}
+              {% if row.percent is not None %}
+                <span class="muted">({{ row.percent }}%)</span>
+              {% endif %}
+            </td>
+            <td>
+              {{ row.predicted_grade }}
+              {% if row.predicted_percent is not None %}
+                <span class="muted">({{ row.predicted_percent }}%)</span>
+              {% endif %}
+              {% if row.potential_gain %}
+                <div class="muted">+{{ row.potential_gain }} pts</div>
+              {% endif %}
+            </td>
+            <td>
+              {{ row.points }} pts
+              {% if row.predicted_points != row.points %}
+                <div class="muted">{{ row.predicted_points }} pts predicted</div>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="muted">Add module grades to calculate UCAS points.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="grid grid-2" style="gap:0.8rem; margin-top:0.9rem;">
+        <div class="badge-ring">
+          <span>Recorded</span>
+          <strong>{{ ucas_summary.total_points }} pts</strong>
+        </div>
+        <div class="badge-ring">
+          <span>Predicted</span>
+          <strong>{{ ucas_summary.predicted_points }} pts</strong>
+        </div>
+      </div>
+      {% if ucas_summary.potential_gain %}
+      <p class="muted" style="margin-top:0.4rem;">Potential gain: +{{ ucas_summary.potential_gain }} pts if you hit your targets.</p>
+      {% endif %}
+      <div style="margin-top:0.8rem;">
+        <p class="muted" style="margin-bottom:0.2rem;"><strong>By pathway</strong></p>
+        <ul style="margin:0; padding-left:1.2rem;">
+          {% for row in ucas_level_breakdown %}
+            <li>{{ row.label }}: {{ row.actual }} pts{% if row.predicted != row.actual %} → {{ row.predicted }} predicted{% endif %}</li>
+          {% empty %}
+            <li class="muted">Track A level or BTEC assessments to unlock the tariff breakdown.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Offer tracker</h3>
+        <form method="post" action="{% url 'core:add_ucas_offer' %}" class="inline-form">
+          {% csrf_token %}
+          <div class="form-field">
+            <label class="sr-only" for="offerInstitution">Institution</label>
+            <input id="offerInstitution" type="text" name="institution" placeholder="Institution" required>
+          </div>
+          <div class="form-field">
+            <label class="sr-only" for="offerCourse">Course</label>
+            <input id="offerCourse" type="text" name="course" placeholder="Course" required>
+          </div>
+          <div class="form-field">
+            <label class="sr-only" for="offerPoints">Points</label>
+            <input id="offerPoints" type="number" name="points" placeholder="Points" min="0">
+          </div>
+          <div class="form-field">
+            <label class="sr-only" for="offerDecisionType">Decision type</label>
+            <select id="offerDecisionType" name="decision_type">
+              {% for value,label in offer_decision_choices %}
+              <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="sr-only" for="offerTargetPoints">Target points</label>
+            <input id="offerTargetPoints" type="number" name="target_points" placeholder="Target points" min="0">
+          </div>
+          <div class="form-field">
+            <label class="sr-only" for="offerDeadline">Deadline</label>
+            <input id="offerDeadline" type="date" name="deadline">
+          </div>
+          <div class="form-field">
+            <label class="sr-only" for="offerNotes">Notes</label>
+            <input id="offerNotes" type="text" name="notes" placeholder="Notes">
+          </div>
+          <button type="submit" class="export-btn">Add offer</button>
+        </form>
+      </div>
+      <table class="table" style="margin-top:0.8rem;">
+        <thead>
+          <tr>
+            <th>University / Course</th>
+            <th>Tariff</th>
+            <th>Status & details</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for offer in offer_tracker %}
+          <tr data-status="{{ offer.status }}">
+            <td>{{ offer.institution }}<br><span class="muted">{{ offer.course }}</span></td>
+            <td>
+              <strong>{{ offer.points }} pts</strong>
+              {% if offer.target_points and offer.target_points != offer.points %}
+                <div class="muted">Target {{ offer.target_points }} pts</div>
+              {% endif %}
+              <div class="muted">Decision: {{ offer.decision_type_label }}</div>
+              {% if offer.deadline %}
+                <div class="muted">Deadline: {{ offer.deadline|date:"M j, Y" }}</div>
+              {% endif %}
+              <div style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.4rem;">
+                <span class="offer-status {% if offer.delta <= 0 %}on-track{% else %}stretch{% endif %}">
+                  {% if offer.delta <= 0 %}
+                    Recorded on track
+                  {% else %}
+                    {{ offer.delta }} pts gap (recorded)
+                  {% endif %}
+                </span>
+                <span class="offer-status {% if offer.predicted_delta <= 0 %}on-track{% else %}stretch{% endif %}">
+                  {% if offer.predicted_delta <= 0 %}
+                    Predicted on track
+                  {% else %}
+                    {{ offer.predicted_delta }} pts gap (predicted)
+                  {% endif %}
+                </span>
+              </div>
+              {% if offer.hint %}
+                <p class="muted small" style="margin-top:0.4rem;">{{ offer.hint }}</p>
+              {% endif %}
+            </td>
+            <td>
+              {% if offer.id %}
+              <form method="post" action="{% url 'core:update_ucas_offer' offer.id %}" class="inline-form">
+                {% csrf_token %}
+                <div class="form-field">
+                  <label class="sr-only" for="offerStatus{{ offer.id }}">Status</label>
+                  <select id="offerStatus{{ offer.id }}" name="status">
+                    {% for value,label in offer_status_choices %}
+                    <option value="{{ value }}" {% if offer.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="sr-only" for="offerDecision{{ offer.id }}">Decision type</label>
+                  <select id="offerDecision{{ offer.id }}" name="decision_type">
+                    {% for value,label in offer_decision_choices %}
+                    <option value="{{ value }}" {% if offer.decision_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="sr-only" for="offerPoints{{ offer.id }}">Points</label>
+                  <input id="offerPoints{{ offer.id }}" type="number" name="points" value="{{ offer.points }}" min="0">
+                </div>
+                <div class="form-field">
+                  <label class="sr-only" for="offerTargetPoints{{ offer.id }}">Target points</label>
+                  <input id="offerTargetPoints{{ offer.id }}" type="number" name="target_points" value="{{ offer.target_points|default_if_none:'' }}" min="0" placeholder="Target">
+                </div>
+                <div class="form-field">
+                  <label class="sr-only" for="offerNotes{{ offer.id }}">Notes</label>
+                  <input id="offerNotes{{ offer.id }}" type="text" name="notes" value="{{ offer.notes }}" placeholder="Notes">
+                </div>
+                <div class="form-field">
+                  <label class="sr-only" for="offerDeadline{{ offer.id }}">Deadline</label>
+                  <input id="offerDeadline{{ offer.id }}" type="date" name="deadline" value="{{ offer.deadline|date:'Y-m-d' }}">
+                </div>
+                <button type="submit" class="export-btn">Save changes</button>
+              </form>
+              {% else %}
+                <span class="muted">Add this offer with the form above.</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if offer.id %}
+              <form method="post" action="{% url 'core:delete_ucas_offer' offer.id %}" onsubmit="return confirm('Remove this offer?');">
+                {% csrf_token %}
+                <button type="submit" class="export-btn">Delete</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="muted">No offers tracked yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="ucasScenarioCard" data-simulate-url="{% url 'core:simulate_ucas_scenario' %}" style="margin-top:1.2rem;">
+    <h3>What-if tariff planner</h3>
+    <p class="card-subtitle">Model predicted grades or new subjects without changing your actual records.</p>
+    <div class="grid grid-2" style="gap:0.8rem;">
+      <div class="form-field">
+        <label for="scenarioSubject">Subject</label>
+        <input id="scenarioSubject" type="text" placeholder="e.g. Maths A level">
+      </div>
+      <div class="form-field">
+        <label for="scenarioQualification">Qualification</label>
+        <select id="scenarioQualification"></select>
+      </div>
+      <div class="form-field">
+        <label for="scenarioGrade">Grade</label>
+        <select id="scenarioGrade"></select>
+      </div>
+      <div class="form-field">
+        <label for="scenarioPercent">Recorded % (optional)</label>
+        <input id="scenarioPercent" type="number" min="0" max="100" step="0.1" placeholder="72">
+      </div>
+    </div>
+    <div style="margin-top:0.6rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+      <button type="button" class="export-btn" id="addScenarioRow">Add to scenario</button>
+      <button type="button" class="export-btn" id="runScenarioBtn">Run scenario</button>
+      <button type="button" class="export-btn" id="clearScenarioBtn">Clear</button>
+    </div>
+    <table class="table" style="margin-top:0.8rem;" id="scenarioTable">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Qualification</th>
+          <th>Grade</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4" class="muted">No scenario entries yet.</td></tr>
+      </tbody>
+    </table>
+    <div id="scenarioSummary" class="muted" style="margin-top:0.6rem;"></div>
+  </div>
+
+  <div class="section-title">Progress insights</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Grade timeline</h3>
+      <p class="card-subtitle">Watch how your weighted average has shifted across recent modules.</p>
+      <div class="chart-wrap">
+        <canvas id="collegeProgressChart" height="230"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Result distribution</h3>
+      <p class="card-subtitle">Breakdown of performance bands so you can spot volatility quickly.</p>
+      <div class="chart-wrap">
+        <canvas id="collegeDistributionChart" height="230"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Predicted vs target grades</div>
+  <div class="card">
+    <p class="card-subtitle">Review prediction gaps per subject to see where effort will have the biggest admissions impact.</p>
+    {% if predicted_matrix %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Predicted</th>
+          <th>Target</th>
+          <th>Gap</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in predicted_matrix %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>{{ row.predicted }} ({{ row.predicted_percent }}%)</td>
+          <td>{{ row.target }} ({{ row.target_percent }}%)</td>
+          <td>
+            {% if row.gap > 0 %}
+              <span class="trend-positive">+{{ row.gap }} pts</span>
+            {% else %}
+              <span class="muted">Target met</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">Add grades to generate your predicted vs target matrix.</div>
+    {% endif %}
+  </div>
+
+  <div class="section-title">Targeted actions</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Focus modules</h3>
+      <p class="card-subtitle">Modules below the 60% focus threshold are flagged for extra attention.</p>
+      {% if needs_focus %}
+      <ul class="list">
+        {% for item in needs_focus %}
+        <li>
+          <span>{{ item.name }}</span>
+          <span class="focus-tag">{{ item.grade }}% &bull; gap {{ item.gap }} pts</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">All logged modules are above the 60% focus threshold.</div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h3>Pathway goals</h3>
+      <p class="card-subtitle">Keep one or two stretch goals active to maintain momentum.</p>
+      {% if pathway_goals %}
+      <ul class="list">
+        {% for goal in pathway_goals %}
+        <li>{{ goal }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">Great work &mdash; set a fresh stretch goal to stay challenged.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="section-title">Recent activity & milestones</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Latest modules</h3>
+      <p class="card-subtitle">Most recent module updates so you can double-check data entry.</p>
+      {% if recent_modules %}
+      <ul class="list">
+        {% for item in recent_modules %}
+        <li>
+          <span>{{ item.name }}</span>
+          <span>{{ item.grade|default:"-" }}% &bull; {{ item.created }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">Add modules to populate your activity timeline.</div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h3>Upcoming milestones</h3>
+      <p class="card-subtitle">Deadlines synced from your study planner to keep UCAS prep on track.</p>
+      {% with upcoming_deadlines as deadlines %}
+        {% if deadlines %}
+        <ul class="list deadlines">
+          {% for deadline in deadlines %}
+          <li>
+            <div>{{ deadline.title }}</div>
+            <small>{{ deadline.due }}</small>
+            <div class="status-pill {{ deadline.status }}">
+              {% if deadline.days < 0 %}
+                overdue
+              {% elif deadline.days == 0 %}
+                due today
+              {% else %}
+                {{ deadline.days }} day{% if deadline.days != 1 %}s{% endif %}
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state">No deadlines logged. Add study milestones to stay ahead.</div>
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <div class="section-title">Super-curricular checklist</div>
+  <div class="card">
+    <p class="card-subtitle">Tick off key experiences that strengthen your application.</p>
+    <div class="checklist">
+      {% for item in skills_checklist %}
+      <form method="post" action="{% url 'core:toggle_super_curricular' %}">
+        {% csrf_token %}
+        <input type="hidden" name="key" value="{{ item.key }}">
+        <input type="hidden" name="completed" value="{{ item.completed|yesno:'true,false' }}">
+        <label>
+          <input type="checkbox" {% if item.completed %}checked{% endif %} onchange="this.form.completed.value=this.checked?'true':'false'; this.form.submit();">
+          {{ item.label }}
+        </label>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section-title">Personal statement progress</div>
+  <div class="card personal-statement-card">
+    <p class="card-subtitle">
+      Target length: {{ personal_statement.target }} words
+      {% if personal_statement.deadline %}&bull; Deadline {{ personal_statement.deadline|date:"d M Y" }}{% endif %}
+    </p>
+    <div class="progress-bar" aria-hidden="true">
+      <span style="width: {{ personal_statement_percent }}%;"></span>
+    </div>
+    <p class="muted" style="margin-top:0.4rem;">
+      {{ personal_statement.word_count }} / {{ personal_statement.target }} words complete ({{ personal_statement_percent }}%).
+      {% if personal_statement.last_updated %} Updated {{ personal_statement.last_updated|date:"d M Y, H:i" }}.{% endif %}
+    </p>
+    <form method="post" action="{% url 'core:save_personal_statement' %}" class="personal-statement-form" style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.8rem;">
+      {% csrf_token %}
+      <input type="number" name="word_count" value="{{ personal_statement.word_count }}" min="0" placeholder="Current words">
+      <input type="number" name="target" value="{{ personal_statement.target }}" min="1" placeholder="Target words">
+      <input type="date" name="deadline" value="{{ personal_statement.deadline|date:'Y-m-d' }}">
+      <button type="submit" class="export-btn">Update</button>
+    </form>
+  </div>
+
+  <div class="section-title">AI suggestion feed</div>
+  <div class="card">
+    <p class="card-subtitle">Quick nudges generated from your latest progress data.</p>
+    <div class="suggestion-list">
+      {% for suggestion in ai_suggestions %}
+      <div class="suggestion-item">{{ suggestion }}</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section-title">Reflection & parent summary</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Weekly reflection</h3>
+      <p class="card-subtitle">Capture a quick reflection to stay intentional. Stored locally for you.</p>
+      <div class="reflection-area">
+        <textarea id="reflectionNotes" placeholder="Reflect on wins, blockers, and next steps..."></textarea>
+        <button type="button" id="reflectionSaveBtn">Save reflection</button>
+      </div>
+      <ul class="muted" style="margin-top:0.8rem;">
+        {% for prompt in reflection_prompts %}
+        <li>{{ prompt }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Parent / guardian summary</h3>
+      <p class="card-subtitle">Export a concise weekly snapshot to share progress and support requests.</p>
+      <button type="button" class="export-btn" id="parentExportBtn">Export printable summary</button>
+      <div class="muted" id="parentExportStatus" style="margin-top:0.6rem;"></div>
+    </div>
+  </div>
+
+  <div class="section-title">AI study projection</div>
+  <div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}">
+    <div class="premium-feature__content card ai-card">
+      {% if not has_premium_access %}
+      <p class="card-subtitle" style="margin-top:0;">Upgrade to Premium to unlock unlimited projections. Free tier users have daily limits.</p>
+      {% endif %}
+      <form method="post" data-ml-form>
+        {% csrf_token %}
+        <label>
+          Current average (%)
+          <input type="number" step="0.1" data-avg-input value="{{ average|default:0 }}">
+        </label>
+        <label>
+          Credits logged
+          <input type="number" step="1" data-credits-input value="{{ credits_total|default:0 }}">
+        </label>
+        <button type="submit" {% if not has_premium_access %}disabled{% endif %}>Run projection</button>
+      </form>
+      <div class="muted" data-ml-result>Enter your latest stats and run the projection.</div>
+    </div>
+    {% if not has_premium_access %}
+    <div class="premium-feature__overlay">
+      <div class="premium-feature__icon"><i class="fa-solid fa-person-chalkboard"></i></div>
+      <strong>AI study projections are premium-only.</strong>
+      <p class="premium-feature__description">
+        Upgrade for unlimited projections, personalised benchmarks, and instant shareable summaries.
+      </p>
+      <a href="{% url 'core:upgrade' %}" class="btn premium-feature__cta">Upgrade for projections</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{{ parent_summary|json_script:"parent-summary-data" }}
+{{ ucas_qualifications|json_script:"ucas-qualifications-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function() {
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop().split(";").shift();
+    }
+    return "";
+  }
+
+  const progressLabels = {{ progress_labels_json|safe }};
+  const progressValues = {{ progress_values_json|safe }};
+  const distributionLabels = {{ distribution_labels_json|safe }};
+  const distributionValues = {{ distribution_data_json|safe }};
+
+  const progressCtx = document.getElementById("collegeProgressChart");
+  if (progressCtx) {
+    new Chart(progressCtx, {
+      type: "line",
+      data: {
+        labels: progressLabels,
+        datasets: [{
+          label: "Average %",
+          data: progressValues,
+          borderColor: "#7c3aed",
+          backgroundColor: "rgba(124,58,237,0.15)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: "#5b21b6"
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { stepSize: 10 } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  const distributionCtx = document.getElementById("collegeDistributionChart");
+  if (distributionCtx) {
+    new Chart(distributionCtx, {
+      type: "doughnut",
+      data: {
+        labels: distributionLabels,
+        datasets: [{
+          data: distributionValues,
+          backgroundColor: ["#4c1d95", "#7c3aed", "#a855f7", "#d8b4fe"],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        plugins: { legend: { position: "bottom" } },
+        cutout: "60%"
+      }
+    });
+  }
+
+  const reflectionBox = document.getElementById("reflectionNotes");
+  const reflectionBtn = document.getElementById("reflectionSaveBtn");
+  if (reflectionBox && reflectionBtn) {
+    const key = "predictmygrade:college:reflection";
+    reflectionBox.value = localStorage.getItem(key) || "";
+    reflectionBtn.addEventListener("click", () => {
+      localStorage.setItem(key, reflectionBox.value);
+      reflectionBtn.textContent = "Reflection saved!";
+      setTimeout(() => { reflectionBtn.textContent = "Save reflection"; }, 2000);
+    });
+  }
+
+  const exportBtn = document.getElementById("parentExportBtn");
+  const exportStatus = document.getElementById("parentExportStatus");
+  if (exportBtn) {
+    const summaryData = JSON.parse(document.getElementById("parent-summary-data").textContent);
+    exportBtn.addEventListener("click", () => {
+      const lines = [
+        "PredictMyGrade Parent Summary",
+        "========================",
+        `Average: ${summaryData.average ?? "n/a"}%`,
+        `UCAS points: ${summaryData.ucas_points ?? 0}`,
+        `Predicted UCAS: ${summaryData.predicted_ucas_points ?? summaryData.ucas_points ?? 0}`,
+        `Readiness: ${summaryData.readiness ?? 0}%`,
+        "",
+        "Offers:"
+      ];
+      (summaryData.offers || []).forEach((offer) => {
+        const predictedDelta = offer.predicted_delta ?? "n/a";
+        lines.push(`- ${offer.institution} (${offer.course}): ${offer.points} pts (delta ${offer.delta}, predicted ${predictedDelta})`);
+      });
+      lines.push("", "Upcoming deadlines:");
+      (summaryData.upcoming_deadlines || []).forEach((item) => {
+        lines.push(`- ${item.title} (${item.due})`);
+      });
+      const blob = new Blob([lines.join("\\n")], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "predictmygrade-parent-summary.txt";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      if (exportStatus) {
+        exportStatus.textContent = "Summary exported as text file.";
+      }
+    });
+  }
+
+  const scenarioCard = document.getElementById("ucasScenarioCard");
+  const qualificationsNode = document.getElementById("ucas-qualifications-data");
+  if (scenarioCard && qualificationsNode) {
+    const simulateUrl = scenarioCard.dataset.simulateUrl;
+    const scenarioEntries = [];
+    const qualifications = JSON.parse(qualificationsNode.textContent || "[]");
+    const subjectInput = document.getElementById("scenarioSubject");
+    const qualificationSelect = document.getElementById("scenarioQualification");
+    const gradeSelect = document.getElementById("scenarioGrade");
+    const percentInput = document.getElementById("scenarioPercent");
+    const addBtn = document.getElementById("addScenarioRow");
+    const runBtn = document.getElementById("runScenarioBtn");
+    const clearBtn = document.getElementById("clearScenarioBtn");
+    const tableBody = document.querySelector("#scenarioTable tbody");
+    const summaryBox = document.getElementById("scenarioSummary");
+    const defaultGrades = ["A*", "A", "B", "C", "D", "E", "U"];
+
+    function updateGradeOptions(key) {
+      const target = qualifications.find((item) => item.key === key);
+      const grades = target && target.grades && target.grades.length ? target.grades : defaultGrades;
+      gradeSelect.innerHTML = "";
+      grades.forEach((grade) => {
+        const option = document.createElement("option");
+        option.value = grade;
+        option.textContent = grade;
+        gradeSelect.appendChild(option);
+      });
+    }
+
+    function populateQualifications() {
+      qualificationSelect.innerHTML = "";
+      const source = qualifications.length ? qualifications : [{ key: "ALEVEL", label: "A Level", grades: defaultGrades }];
+      source.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.key;
+        option.textContent = item.label;
+        qualificationSelect.appendChild(option);
+      });
+      updateGradeOptions(qualificationSelect.value);
+    }
+
+    populateQualifications();
+
+    qualificationSelect.addEventListener("change", (event) => {
+      updateGradeOptions(event.target.value);
+    });
+
+    function renderScenarioRows() {
+      if (!tableBody) {
+        return;
+      }
+      tableBody.innerHTML = "";
+      if (!scenarioEntries.length) {
+        const empty = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 4;
+        cell.className = "muted";
+        cell.textContent = "No scenario entries yet.";
+        empty.appendChild(cell);
+        tableBody.appendChild(empty);
+        return;
+      }
+      scenarioEntries.forEach((entry, index) => {
+        const row = document.createElement("tr");
+        const subjectCell = document.createElement("td");
+        subjectCell.textContent = entry.subject;
+        const qualificationCell = document.createElement("td");
+        qualificationCell.textContent = entry.qualificationLabel || entry.qualification;
+        const gradeCell = document.createElement("td");
+        gradeCell.textContent = entry.percent != null ? `${entry.grade} (${entry.percent}%)` : entry.grade;
+        const actionCell = document.createElement("td");
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.dataset.index = index;
+        removeBtn.textContent = "Remove";
+        removeBtn.style.background = "none";
+        removeBtn.style.border = "none";
+        removeBtn.style.color = "#7c3aed";
+        removeBtn.style.cursor = "pointer";
+        actionCell.appendChild(removeBtn);
+        row.appendChild(subjectCell);
+        row.appendChild(qualificationCell);
+        row.appendChild(gradeCell);
+        row.appendChild(actionCell);
+        tableBody.appendChild(row);
+      });
+    }
+
+    renderScenarioRows();
+
+    if (tableBody) {
+      tableBody.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target && target.dataset && Object.prototype.hasOwnProperty.call(target.dataset, "index")) {
+          const idx = Number(target.dataset.index);
+          if (!Number.isNaN(idx)) {
+            scenarioEntries.splice(idx, 1);
+            renderScenarioRows();
+            summaryBox.textContent = scenarioEntries.length ? `${scenarioEntries.length} item(s) queued.` : "Scenario cleared.";
+          }
+        }
+      });
+    }
+
+    addBtn.addEventListener("click", () => {
+      const subject = (subjectInput.value || "").trim();
+      if (!subject) {
+        summaryBox.textContent = "Add a subject name before building the scenario.";
+        return;
+      }
+      const qualification = qualificationSelect.value || "ALEVEL";
+      const selectedOption =
+        qualificationSelect.options && qualificationSelect.selectedIndex >= 0
+          ? qualificationSelect.options[qualificationSelect.selectedIndex]
+          : null;
+      const qualificationLabel = selectedOption ? selectedOption.textContent : qualification;
+      const grade = gradeSelect.value || "A";
+      let percentValue = percentInput.value ? parseFloat(percentInput.value) : null;
+      if (!Number.isFinite(percentValue)) {
+        percentValue = null;
+      } else {
+        percentValue = Math.max(0, Math.min(100, Math.round(percentValue * 10) / 10));
+      }
+      scenarioEntries.push({
+        subject: subject.slice(0, 120),
+        qualification,
+        qualificationLabel,
+        grade,
+        percent: percentValue,
+      });
+      subjectInput.value = "";
+      percentInput.value = "";
+      summaryBox.textContent = `${scenarioEntries.length} item(s) queued.`;
+      renderScenarioRows();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      scenarioEntries.length = 0;
+      renderScenarioRows();
+      summaryBox.textContent = "Scenario cleared.";
+    });
+
+    function renderScenarioSummary(payload) {
+      if (!summaryBox) {
+        return;
+      }
+      if (!payload || !payload.summary) {
+        summaryBox.textContent = "Unable to calculate scenario right now.";
+        return;
+      }
+      const summary = payload.summary;
+      const parts = [
+        `Recorded: ${summary.total_points} pts`,
+        `Predicted: ${summary.predicted_points} pts`,
+      ];
+      if (summary.potential_gain) {
+        parts.push(`Potential gain: +${summary.potential_gain} pts`);
+      }
+      summaryBox.innerHTML = `<strong>${parts.join(" · ")}</strong>`;
+      if (Array.isArray(payload.offers) && payload.offers.length) {
+        const label = document.createElement("p");
+        label.className = "muted";
+        label.style.marginTop = "0.4rem";
+        label.textContent = "Offers:";
+        const list = document.createElement("ul");
+        list.style.margin = "0.2rem 0 0 1rem";
+        payload.offers.forEach((offer) => {
+          const item = document.createElement("li");
+          const institution = typeof offer.institution === "string" ? offer.institution : "";
+          item.textContent = `${institution}: delta ${offer.delta}, predicted ${offer.predicted_delta}`;
+          list.appendChild(item);
+        });
+        summaryBox.appendChild(label);
+        summaryBox.appendChild(list);
+      }
+    }
+
+    runBtn.addEventListener("click", () => {
+      if (!simulateUrl) {
+        summaryBox.textContent = "Simulation endpoint not available.";
+        return;
+      }
+      fetch(simulateUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ entries: scenarioEntries }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Unable to simulate scenario.");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          renderScenarioSummary(data);
+        })
+        .catch((error) => {
+          summaryBox.textContent = error.message;
+        });
+    });
+  }
+
+  const offerFilterButtons = document.querySelectorAll('[data-offer-filter]');
+  const offerRows = document.querySelectorAll('#offerTrackerTable tbody tr[data-status]');
+  const offerAlert = document.getElementById('offerAlertMessage');
+  const offerAlertDefault = offerAlert ? offerAlert.dataset.defaultText : '';
+  let activeOfferFilter = 'all';
+
+  function updateOfferMessage(status) {
+    if (!offerAlert) return;
+    if (status === 'all') {
+      offerAlert.textContent = offerAlertDefault;
+      return;
+    }
+    const label =
+      document.querySelector(`[data-offer-filter="${status}"]`)?.dataset.filterLabel || status;
+    const visibleCount = [...offerRows].filter((row) => !row.hidden).length;
+    const suffix = visibleCount === 1 ? 'offer' : 'offers';
+    offerAlert.textContent = `${visibleCount} ${suffix} match ${label}.`;
+  }
+
+  function applyOfferFilter() {
+    offerRows.forEach((row) => {
+      row.hidden = activeOfferFilter !== 'all' && row.dataset.status !== activeOfferFilter;
+    });
+    updateOfferMessage(activeOfferFilter);
+  }
+
+  offerFilterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const status = button.dataset.offerFilter;
+      if (status === 'all') {
+        activeOfferFilter = 'all';
+      } else {
+        activeOfferFilter = activeOfferFilter === status ? 'all' : status;
+      }
+      offerFilterButtons.forEach((btn) =>
+        btn.classList.toggle('active', btn.dataset.offerFilter === activeOfferFilter)
+      );
+      applyOfferFilter();
+    });
+  });
+
+  applyOfferFilter();
+})();
+</script>
+{% endblock %}

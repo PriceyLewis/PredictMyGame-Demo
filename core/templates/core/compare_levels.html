@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Compare Levels{% endblock %}
+
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <style>
+    .compare-levels-page {
+      padding: 2.5rem 0 4rem;
+      color: #f5f4fe;
+    }
+    .compare-levels-page .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .compare-hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      border-radius: 16px;
+      background: radial-gradient(circle at top left, rgba(124, 58, 237, 0.25), rgba(15, 11, 26, 0.9));
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      box-shadow: 0 20px 45px rgba(15, 11, 26, 0.65);
+    }
+    .compare-hero h2 {
+      margin-bottom: 0.4rem;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    .eyebrow {
+      letter-spacing: 0.2em;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.75);
+    }
+    .hero-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    .hero-stat {
+      padding: 0.9rem 1rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(167, 139, 250, 0.25);
+    }
+    .hero-stat strong {
+      display: block;
+      font-size: 1.3rem;
+      margin-top: 0.25rem;
+    }
+    .hero-note {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .compare-grid {
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1rem;
+    }
+    .level-card {
+      padding: 1.25rem;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(15, 11, 26, 0.9), rgba(28, 21, 53, 0.9));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+      min-height: 200px;
+    }
+    .level-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), transparent);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .level-card:hover::after {
+      opacity: 1;
+    }
+    .level-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+    .level-head h3 {
+      font-size: 1.25rem;
+      margin: 0;
+      letter-spacing: 0.04em;
+    }
+    .level-class {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+    .level-average {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .progress-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+    .progress-fill {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #a78bfa, #34d399);
+      transition: width 0.8s ease;
+    }
+    .level-note {
+      margin-top: 1rem;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 0.9rem;
+    }
+    .chart-panel {
+      margin-top: 2.25rem;
+      padding: 2rem;
+      border-radius: 20px;
+      background: rgba(16, 12, 28, 0.95);
+      border: 1px solid rgba(124, 58, 237, 0.4);
+      box-shadow: 0 20px 60px rgba(15, 10, 26, 0.7);
+    }
+    .chart-panel h3 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .chart-card {
+      margin-top: 1.5rem;
+      padding: 1.2rem;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+    .chart-card canvas {
+      width: 100%;
+      max-height: 220px;
+      display: block;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .chart-card canvas.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .summary-grid {
+      margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+    .summary-tile {
+      padding: 1rem;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .summary-tile strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 0.2rem;
+    }
+    .locked-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 0.75rem;
+      text-align: center;
+      color: #fff;
+      background: rgba(15, 11, 26, 0.75);
+      border-radius: 14px;
+    }
+    .locked-overlay .btn {
+      padding: 0.5rem 1.3rem;
+    }
+    .muted {
+      color: rgba(255, 255, 255, 0.65);
+    }
+    @media (max-width: 768px) {
+      .compare-hero {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .hero-meta {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="compare-levels-page">
+    <div class="container">
+      <section class="compare-hero">
+        <div class="hero-text">
+          <p class="eyebrow">Benchmark Snapshot</p>
+          <h2>Compare your averages across each level</h2>
+          <p class="muted">
+            As a {{ user_role|default:"student"|capfirst }}, keep an eye on your GCSE, College, and University averages so you can adjust your focus where it matters most.
+          </p>
+        </div>
+        <div class="hero-meta">
+          <div class="hero-stat">
+            <span class="hero-note">GCSE Pace</span>
+            <strong>{{ gcse_avg }}%</strong>
+            <small class="muted">Grade {{ gcse_class }}</small>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-note">College Momentum</span>
+            <strong>{{ college_avg }}%</strong>
+            <small class="muted">Grade {{ college_class }}</small>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-note">University Readiness</span>
+            <strong>{{ uni_avg }}%</strong>
+            <small class="muted">Grade {{ uni_class }}</small>
+          </div>
+          {% if not is_premium %}
+            <div class="hero-stat">
+              <p class="hero-note">Premium access</p>
+              <span class="muted">Unlock deeper insights</span>
+              <a href="{% url 'core:upgrade' %}" class="btn glow" style="margin-top: 0.5rem;">Upgrade now</a>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="compare-grid">
+        <article class="level-card">
+          <div class="level-head">
+            <h3>GCSE</h3>
+            <span class="level-class">{{ gcse_class }}</span>
+          </div>
+          <p class="level-average">{{ gcse_avg }}%</p>
+          <div class="progress-track">
+            <span class="progress-fill" style="width: {{ gcse_avg }}%;"></span>
+          </div>
+          <p class="level-note">
+            Your GCSE average sits well above baseline expectations. Keep curating revision plans to stay ahead as you move into college-style assessments.
+          </p>
+        </article>
+        <article class="level-card">
+          <div class="level-head">
+            <h3>College</h3>
+            <span class="level-class">{{ college_class }}</span>
+          </div>
+          <p class="level-average">{{ college_avg }}%</p>
+          <div class="progress-track">
+            <span class="progress-fill" style="width: {{ college_avg }}%;"></span>
+          </div>
+          <p class="level-note">
+            College performance is trending steadily. Try to convert that momentum into consistent study blocks so your grade profile stays strong across subjects.
+          </p>
+        </article>
+        <article class="level-card">
+          <div class="level-head">
+            <h3>University</h3>
+            <span class="level-class">{{ uni_class }}</span>
+          </div>
+          <p class="level-average">{{ uni_avg }}%</p>
+          <div class="progress-track">
+            <span class="progress-fill" style="width: {{ uni_avg }}%;"></span>
+          </div>
+          <p class="level-note">
+            Keep an eye on long-term goals — your current standing gives you a solid foundation for university-style assessments once they begin.
+          </p>
+        </article>
+      </section>
+
+      <section class="chart-panel">
+        <div class="panel-heading">
+          <h3>Larger comparison</h3>
+          <p class="muted">Visualise how each level contributes to your overall academic progress.</p>
+        </div>
+        {% if is_premium %}
+          <div class="chart-card">
+            <canvas id="compareChart" height="200" aria-label="Compare averages across levels"></canvas>
+          </div>
+          <div class="summary-grid">
+            <article class="summary-tile">
+              <strong>GCSE</strong>
+              <span class="muted">Grade {{ gcse_class }} — {{ gcse_avg }}%</span>
+            </article>
+            <article class="summary-tile">
+              <strong>College</strong>
+              <span class="muted">Grade {{ college_class }} — {{ college_avg }}%</span>
+            </article>
+            <article class="summary-tile">
+              <strong>University</strong>
+              <span class="muted">Grade {{ uni_class }} — {{ uni_avg }}%</span>
+            </article>
+          </div>
+        {% else %}
+          <div class="chart-card" style="min-height: 260px;">
+            <canvas id="lockedChart" height="210" aria-hidden="true"></canvas>
+            <div class="locked-overlay">
+              <strong>Premium feature</strong>
+              <p>Unlock the full comparison chart plus insights to show exactly where to focus.</p>
+              <a href="{% url 'core:upgrade' %}" class="btn glow" style="background:#f0b90b; color:#121212;">Upgrade</a>
+            </div>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      {% if is_premium %}
+        const chartCanvas = document.getElementById('compareChart');
+        if (chartCanvas) {
+          const ctx = chartCanvas.getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['GCSE ({{ gcse_class }})', 'College ({{ college_class }})', 'University ({{ uni_class }})'],
+              datasets: [{
+                label: 'Average (%)',
+                data: [{{ gcse_avg }}, {{ college_avg }}, {{ uni_avg }}],
+                borderWidth: 2,
+                borderRadius: 14,
+                backgroundColor: [
+                  'rgba(96, 165, 250, 0.9)',
+                  'rgba(167, 139, 250, 0.9)',
+                  'rgba(16, 185, 129, 0.9)'
+                ],
+                hoverBackgroundColor: [
+                  'rgba(96, 165, 250, 1)',
+                  'rgba(167, 139, 250, 1)',
+                  'rgba(16, 185, 129, 1)'
+                ]
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                  ticks: {
+                    stepSize: 10
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false
+                  },
+                  ticks: {
+                    font: {
+                      size: 14
+                    }
+                  }
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(51, 52, 76, 0.9)',
+                  titleFont: {
+                    size: 14
+                  },
+                  bodyFont: {
+                    size: 13
+                  },
+                  callbacks: {
+                    label: (context) => `Average: ${context.parsed.y}%`
+                  }
+                },
+                title: {
+                  display: true,
+                  text: 'Academic Progress Comparison',
+                  font: {
+                    size: 18,
+                    weight: 600
+                  }
+                }
+              },
+              animation: {
+                duration: 1200,
+                easing: 'easeOutQuart'
+              }
+            }
+          });
+          requestAnimationFrame(() => chartCanvas.classList.add('visible'));
+        }
+      {% else %}
+        const lockedCanvas = document.getElementById('lockedChart');
+        if (lockedCanvas) {
+          const ctx = lockedCanvas.getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['GCSE', 'College', 'University'],
+              datasets: [{
+                label: 'Average (%)',
+                data: [52, 60, 68],
+                borderWidth: 0,
+                borderRadius: 12,
+                backgroundColor: [
+                  'rgba(160, 160, 160, 0.4)',
+                  'rgba(160, 160, 160, 0.4)',
+                  'rgba(160, 160, 160, 0.4)'
+                ]
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                  display: false
+                },
+                x: {
+                  grid: {
+                    display: false
+                  },
+                  ticks: {
+                    color: 'rgba(255, 255, 255, 0.6)'
+                  }
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                }
+              },
+              animation: false
+            }
+          });
+        }
+      {% endif %}
+    });
+  </script>
+{% endblock %}

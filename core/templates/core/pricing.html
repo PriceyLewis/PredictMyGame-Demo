@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Pricing{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/levels.css' %}">
+{% endblock %}
+{% block content %}
+<div class="level-dashboard pricing-dashboard">
+  <form id="pricingCsrf" method="post" style="display:none;">{% csrf_token %}</form>
+
+  <div class="level-header">
+    <div>
+      <h1>PredictMyGrade Premium</h1>
+      <p class="muted">Unlock the full AI mentor, unlimited predictions, deep analytics, and voice guidance.</p>
+    </div>
+    <div class="badge-ring">
+      <span>Current plan</span>
+      <strong>
+        {{ plan_label }}
+      </strong>
+    </div>
+  </div>
+
+  <div class="level-toolbar">
+    <div class="toolbar-meta">
+      Compare monthly vs yearly plans and upgrade whenever you're ready.
+    </div>
+    <div class="level-actions">
+      {% if has_premium_access and not request.user.profile.is_trial_active %}
+      <a class="level-btn secondary" href="{% url 'core:manage_subscription' %}">Manage subscription</a>
+      {% else %}
+      <a class="level-btn secondary" href="{% url 'core:help' %}">See help guide</a>
+      {% endif %}
+      <a class="level-btn outline" href="{% url 'core:dashboard' %}">Back to dashboard</a>
+    </div>
+  </div>
+
+  {% with billing_enabled=billing_checkout_available %}
+  <div class="grid grid-2">
+    <div class="card plan-card">
+      <h3>Monthly</h3>
+      <p class="big-number">&pound;9.99<span style="font-size:1rem;">/mo</span></p>
+      <ul class="list">
+        <li>Unlimited AI mentor chats</li>
+        <li>Voice guidance and study nudges</li>
+        <li>Advanced forecasts &amp; export tools</li>
+      </ul>
+      <button
+        class="btn"
+        type="button"
+        data-checkout="monthly"
+        {% if not billing_enabled or has_premium_access %}disabled aria-disabled="true"{% endif %}
+      >
+        {% if has_premium_access %}
+          Already premium
+        {% elif billing_enabled %}
+          {% if billing_is_mock %}Start demo monthly plan{% else %}Start monthly plan{% endif %}
+        {% else %}
+          Premium Coming Soon
+        {% endif %}
+      </button>
+    </div>
+
+    <div
+      class="card plan-card"
+      style="border:1px solid rgba(124, 58, 237, 0.6); box-shadow:0 18px 44px rgba(124,58,237,0.35);"
+    >
+      <h3>Yearly</h3>
+      <p class="big-number">&pound;99<span style="font-size:1rem;">/yr</span></p>
+      <p class="muted small" style="margin-top:-0.4rem;">Two months free vs monthly</p>
+      <ul class="list">
+        <li>All premium features</li>
+        <li>Priority mentor refreshes</li>
+        <li>Quarterly insight reports</li>
+      </ul>
+      <button
+        class="btn"
+        type="button"
+        data-checkout="yearly"
+        {% if not billing_enabled or has_premium_access %}disabled aria-disabled="true"{% endif %}
+      >
+        {% if has_premium_access %}
+          Already premium
+        {% elif billing_enabled %}
+          {% if billing_is_mock %}Start demo yearly plan{% else %}Start yearly plan{% endif %}
+        {% else %}
+          Premium Coming Soon
+        {% endif %}
+      </button>
+    </div>
+  </div>
+  {% if billing_is_mock %}
+  <p class="muted small" style="margin-top:0.8rem;">
+    Demo billing mode is active. Upgrade buttons simulate checkout and never collect a real payment method.
+  </p>
+  {% elif not billing_enabled %}
+  <p class="muted small" style="margin-top:0.8rem;">
+    Subscription billing is not yet enabled in this environment.
+  </p>
+  {% endif %}
+  {% endwith %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  document.querySelectorAll('[data-checkout]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) {
+        return;
+      }
+      const plan = btn.dataset.checkout || 'monthly';
+      const tokenInput = document.querySelector('#pricingCsrf input[name="csrfmiddlewaretoken"]');
+      const csrfToken = tokenInput ? tokenInput.value : '';
+      btn.disabled = true;
+      btn.classList.add('loading');
+      try {
+        const response = await fetch("{% url 'core:create_checkout_session_default' %}", {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({ plan_type: plan }),
+        });
+        const data = await response.json();
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+          return;
+        }
+        alert(data.error || 'Unable to start checkout.');
+      } catch (error) {
+        console.error('PredictMyGrade: checkout failed', error);
+        alert('Unable to start checkout. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

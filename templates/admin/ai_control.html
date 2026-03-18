@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% load tz %}
+{% block content %}
+  <div class="card" style="padding:1.5rem;">
+    <h2>🧠 PredictMyGrade AI Controls</h2>
+    <p>Manage and retrain the AI models for Free and Premium users.</p>
+
+    {% if ai_status %}
+      <p><strong>📅 Last retrained:</strong>
+        {{ ai_status.last_retrained_at|localtime|date:"M d, Y — H:i" }}</p>
+    {% else %}
+      <p><em>No retraining record found yet.</em></p>
+    {% endif %}
+
+    <form method="post" style="margin-top:1rem;">{% csrf_token %}
+      <button type="submit" name="retrain_ai" class="button btn btn-primary">
+        🔁 Retrain AI Now
+      </button>
+    </form>
+  </div>
+{% endblock %}

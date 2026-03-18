@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment files (local or Render secret files)
+.env
+.env.*
+*.env
+!*.env.example
+
+# Django & local artifacts
+db.sqlite3
+config/.django_secret_key
+
+# Static build outputs
+staticfiles/
+
+# OS files
+.DS_Store
+Thumbs.db

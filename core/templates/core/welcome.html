@@ -1,0 +1,755 @@
+﻿{% extends "base.html" %}
+{% load static %}
+{% block title %}Welcome Hub{% endblock %}
+{% block body_attrs %} class="welcome-page theme-{{ request.session.theme|default:'dark' }}"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/levels.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cXYdDA9vwBGQQGy1dcZ8RMXjY2yZiQ7sEBQYVmA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    .welcome-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+    .welcome-hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      padding: 2rem;
+      border-radius: 20px;
+      background: linear-gradient(120deg, rgba(124, 58, 237, 0.25), rgba(15, 15, 25, 0.92));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 60px rgba(15, 11, 26, 0.35);
+    }
+    .welcome-hero h1 {
+      margin: 0.35rem 0;
+      font-size: clamp(2rem, 3vw, 2.6rem);
+    }
+    .hero-note {
+      margin: 0 0 1.25rem;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.05rem;
+    }
+    .welcome-hero .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .welcome-hero p {
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 1.25rem;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .hero-actions .btn {
+      min-width: 180px;
+      justify-content: center;
+      text-align: center;
+    }
+    .hero-actions .btn.tertiary {
+      border: 1px dashed rgba(255, 255, 255, 0.35);
+      background: transparent;
+    }
+    .hero-focus {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .focus-chip {
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+      background: rgba(10, 10, 20, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.85);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .focus-chip strong {
+      display: block;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .hero-highlights {
+      padding: 1.5rem;
+      border-radius: 16px;
+      background: rgba(7, 8, 15, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .hero-highlights li {
+      list-style: none;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .hero-highlights i {
+      color: #a78bfa;
+      margin-top: 0.1rem;
+    }
+    .snapshot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .snapshot-card {
+      padding: 1.5rem;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(13, 16, 24, 0.85);
+      backdrop-filter: blur(6px);
+    }
+    .snapshot-card header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 0.75rem;
+    }
+    .snapshot-card .metric {
+      font-size: 2rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    .snapshot-card .muted {
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.65);
+    }
+    .progress-bar {
+      margin-top: 0.5rem;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+    .progress-bar span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #a78bfa, #34d399);
+      transition: width 0.6s ease;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .feature-card {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 1.25rem;
+      background: rgba(16, 17, 27, 0.9);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: #a78bfa;
+    }
+    .feature-card h3 {
+      margin: 0.25rem 0;
+      font-size: 1.15rem;
+    }
+    .feature-card p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.95rem;
+    }
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .insight-panel {
+      padding: 1.5rem;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(9, 11, 19, 0.88);
+    }
+    .focus-banner {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .focus-card {
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      background: rgba(15, 15, 25, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .focus-card strong {
+      display: block;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.65);
+      margin-bottom: 0.2rem;
+    }
+    .insight-panel ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .insight-panel li {
+      border-left: 3px solid rgba(255, 255, 255, 0.15);
+      padding-left: 0.75rem;
+    }
+    .insight-panel li.empty-illustration {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      padding: 1rem;
+      border-radius: 14px;
+      background: rgba(14, 15, 25, 0.6);
+    }
+    .insight-panel svg {
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+    .onboarding-steps {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .onboarding-steps li {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.9rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(13, 15, 24, 0.65);
+    }
+    .onboarding-steps li.is-done {
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      background: rgba(16, 46, 37, 0.6);
+    }
+    .step-index {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    .onboarding-steps li.is-done .step-index {
+      background: rgba(52, 211, 153, 0.25);
+      color: #34d399;
+    }
+    .step-link {
+      font-size: 0.9rem;
+      text-decoration: none;
+      color: #a78bfa;
+    }
+    .checklist-complete {
+      display: flex;
+      gap: 0.9rem;
+      padding: 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      background: rgba(15, 40, 33, 0.65);
+      align-items: center;
+    }
+    .checklist-complete i {
+      color: #34d399;
+      font-size: 1.4rem;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.8);
+    }
+    @media (max-width: 640px) {
+      .welcome-shell {
+        padding-top: 1.5rem;
+      }
+      .welcome-hero {
+        padding: 1.5rem;
+      }
+      .feature-card, .snapshot-card, .insight-panel {
+        padding: 1.1rem;
+      }
+      .hero-actions {
+        flex-direction: column;
+      }
+      .hero-actions .btn {
+        width: 100%;
+      }
+      .onboarding-steps li {
+        grid-template-columns: 32px 1fr;
+      }
+      .onboarding-steps li .step-link {
+        grid-column: 2 / span 1;
+        justify-self: flex-start;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .feature-card, .snapshot-card, .welcome-hero, .focus-chip, .status-pill {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="welcome-shell" {% if request.user.is_authenticated %}data-dashboard-feed="{% url 'core:dashboard_live_data' %}" data-cache-key="pmg:welcomeLiveSnapshot" data-cache-ttl="300000"{% endif %}>
+  <section class="welcome-hero card panel">
+    <div>
+      <p class="eyebrow">PredictMyGrade Command Center</p>
+      <h1>Welcome back, {{ request.user.first_name|default:request.user.username|default:"there" }}</h1>
+      {% if personalised_note %}
+        <p class="hero-note">{{ personalised_note }}</p>
+      {% else %}
+        <p>Track your term, project final grades, and let AI surface the next best step. This overview keeps every major workflow one click away.</p>
+      {% endif %}
+      <div class="hero-focus">
+        {% if next_deadline %}
+          <div class="focus-chip">
+            <i class="fa-regular fa-calendar-days"></i>
+            <div>
+              <strong>Next deadline</strong>
+              <span>{{ next_deadline.title }} • {{ next_deadline.due_display }}</span>
+            </div>
+          </div>
+        {% endif %}
+        {% if at_risk_module %}
+          <div class="focus-chip">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+              <strong>At-risk module</strong>
+              <span>{{ at_risk_module.name }} • {{ at_risk_module.grade }}%</span>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      <div class="hero-actions">
+        {% if hero_primary_cta %}
+          <a href="{{ hero_primary_cta.url }}" class="btn primary" data-analytics-id="hero_primary">
+            <i class="fa-solid {{ hero_primary_cta.icon }}"></i>
+            <span>{{ hero_primary_cta.label }}</span>
+          </a>
+        {% endif %}
+        {% if hero_secondary_cta %}
+          <a href="{{ hero_secondary_cta.url }}" class="btn secondary" data-analytics-id="hero_secondary">
+            <i class="fa-solid {{ hero_secondary_cta.icon }}"></i>
+            <span>{{ hero_secondary_cta.label }}</span>
+          </a>
+        {% endif %}
+        {% if hero_help_cta %}
+          <a href="{{ hero_help_cta.url }}" class="btn secondary subtle" data-analytics-id="hero_help">
+            <i class="fa-solid {{ hero_help_cta.icon }}"></i>
+            <span>{{ hero_help_cta.label }}</span>
+          </a>
+        {% endif %}
+        {% if continue_url %}
+          <a href="{{ continue_url }}" class="btn tertiary" data-analytics-id="hero_continue">
+            <i class="fa-solid fa-arrow-right-long"></i>
+            <span>Continue previous task</span>
+          </a>
+        {% endif %}
+      </div>
+      <p class="status-pill" data-overview-status>{{ onboarding_progress_label }}</p>
+    </div>
+    <div class="hero-highlights">
+      <h3>Everything in one glance</h3>
+      <ul>
+        <li><i class="fa-solid fa-bullseye"></i>Targets, projections, and alerts align in a single place.</li>
+        {% if next_deadline %}
+          <li><i class="fa-solid fa-calendar-check"></i>{{ next_deadline.title }} due {{ next_deadline.due_display }} — reminders keep you ahead.</li>
+        {% else %}
+          <li><i class="fa-solid fa-calendar-plus"></i>Surface upcoming deadlines and let nudges keep momentum high.</li>
+        {% endif %}
+        {% if at_risk_module %}
+          <li><i class="fa-solid fa-heart-pulse"></i>{{ at_risk_module.name }} needs {{ at_risk_module.target_score }}% for {{ at_risk_module.target_label }}.</li>
+        {% else %}
+          <li><i class="fa-solid fa-robot"></i>AI insights adapt to your study rhythm and flag risks early.</li>
+        {% endif %}
+        <li><i class="fa-solid fa-person-running"></i>Quick actions jump straight into the workflows you use most.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="snapshot-grid">
+    <article class="snapshot-card" data-snapshot="average">
+      <header>
+        <span>Current average</span>
+        <i class="fa-solid fa-gauge-high"></i>
+      </header>
+      <p class="metric" data-gpa-value>—</p>
+      <p class="muted" data-gpa-band>Log your first modules to see trendlines.</p>
+    </article>
+    <article class="snapshot-card" data-snapshot="credits">
+      <header>
+        <span>Credits completed</span>
+        <i class="fa-solid fa-graduation-cap"></i>
+      </header>
+      <p class="metric"><span data-progress-value>0</span>%</p>
+      <div class="progress-bar" aria-hidden="true">
+        <span data-progress-bar style="width: 0%;"></span>
+      </div>
+      <p class="muted">Add modules and assessments to unlock progress tracking.</p>
+    </article>
+    <article class="snapshot-card" data-snapshot="ai">
+      <header>
+        <span>AI forecast</span>
+        <i class="fa-solid fa-sparkles"></i>
+      </header>
+      <p class="metric" data-ai-value>Upgrade to unlock</p>
+      <p class="muted" data-ai-model>Premium predicts finals with personalised confidence bands.</p>
+      <p class="status-pill" data-ai-confidence><i class="fa-solid fa-wave-square"></i>Confidence —</p>
+    </article>
+  </section>
+
+  <section>
+    <h2>Explore every tool</h2>
+    <div class="feature-grid">
+      <a class="feature-card" href="{% url 'core:dashboard' %}" data-analytics-id="feature_grade_tracker">
+        <i class="fa-solid fa-chart-simple"></i>
+        <h3>Grade Tracker</h3>
+        <p>Monitor weighted averages, view performance bands, and sync targets per module.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:modules_list' %}" data-analytics-id="feature_modules">
+        <i class="fa-solid fa-layer-group"></i>
+        <h3>Modules &amp; credits</h3>
+        <p>Add, reorder, or archive modules while keeping an eye on credit completion.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:ai_reports' %}" data-analytics-id="feature_ai_reports">
+        <i class="fa-solid fa-robot"></i>
+        <h3>AI insights &amp; reports</h3>
+        <p>Deep dives, PDF exports, and smart nudges trained on your latest submissions.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:study_goals' %}" data-analytics-id="feature_planner">
+        <i class="fa-solid fa-list-check"></i>
+        <h3>Actionable planner</h3>
+        <p>Set study goals, log deadlines, and let the assistant build revision schedules.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:privacy_dashboard' %}" data-analytics-id="feature_privacy">
+        <i class="fa-solid fa-user-shield"></i>
+        <h3>Privacy dashboard</h3>
+        <p>Control exports, backups, and connected devices from one secure panel.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:whats_new' %}" data-analytics-id="feature_whats_new">
+        <i class="fa-solid fa-star"></i>
+        <h3>What’s new</h3>
+        <p>See fresh capabilities, release notes, and upcoming experiments.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="insight-grid">
+    <article class="insight-panel">
+      <header>
+        <h3>Personalised recommendations</h3>
+        <p class="muted">We highlight the top opportunities and risks every time you sign in.</p>
+      </header>
+      {% if next_deadline or at_risk_module %}
+        <div class="focus-banner">
+          {% if next_deadline %}
+            <div class="focus-card">
+              <strong>Next deadline</strong>
+              <p>{{ next_deadline.title }}</p>
+              <small>Due {{ next_deadline.due_display }}{% if next_deadline.module %} • {{ next_deadline.module }}{% endif %}</small>
+            </div>
+          {% endif %}
+          {% if at_risk_module %}
+            <div class="focus-card">
+              <strong>Module to boost</strong>
+              <p>{{ at_risk_module.name }}</p>
+              <small>{{ at_risk_module.grade }}% now • Aim {{ at_risk_module.target_score }}% ({{ at_risk_module.target_label }})</small>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+      <ul data-insight-feed>
+        <li class="empty-illustration">
+          <svg viewBox="0 0 64 64" role="presentation" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 44c6-8 12-8 18 0s12 8 18 0"></path>
+            <circle cx="22" cy="26" r="3" fill="currentColor" opacity="0.6"></circle>
+            <circle cx="42" cy="22" r="3" fill="currentColor" opacity="0.4"></circle>
+            <path fill="none" stroke="currentColor" stroke-width="2" d="M8 12h48v40H8z"></path>
+          </svg>
+          <div>
+            <strong>Waiting for insights</strong>
+            <p class="muted">Log assessments and goals to let the assistant tailor suggestions instantly.</p>
+          </div>
+        </li>
+      </ul>
+    </article>
+    <article class="insight-panel">
+      <header>
+        <h3>Quick start checklist</h3>
+        <p class="muted">
+          {% if onboarding_complete %}
+            Everything required for high-signal predictions is already in place.
+          {% else %}
+            Great for new users, optional for power users.
+          {% endif %}
+        </p>
+      </header>
+      {% if onboarding_complete %}
+        <div class="checklist-complete">
+          <i class="fa-solid fa-circle-check"></i>
+          <div>
+            <strong>You’re all set</strong>
+            <p class="muted">Track new terms, share progress, or explore advanced analytics whenever you like.</p>
+          </div>
+        </div>
+      {% else %}
+        <ol class="onboarding-steps">
+          {% for step in onboarding_steps %}
+            <li class="{% if step.done %}is-done{% endif %}">
+              <span class="step-index">
+                {% if step.done %}
+                  <i class="fa-solid fa-check"></i>
+                {% else %}
+                  {{ forloop.counter }}
+                {% endif %}
+              </span>
+              <div>
+                <strong>{{ step.title }}</strong>
+                <p class="muted">{{ step.description }}</p>
+              </div>
+              {% if step.done %}
+                <span class="step-link muted">Done</span>
+              {% else %}
+                <a class="step-link" href="{{ step.action }}">Do this</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+      <a class="btn secondary" href="{% url 'core:welcome_tour' %}"><i class="fa-solid fa-person-walking"></i><span>Launch guided tour</span></a>
+    </article>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  {% if request.user.is_authenticated %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const shell = document.querySelector(".welcome-shell");
+      const dataLayerName = "{{ ANALYTICS_DATA_LAYER|default:'dataLayer' }}";
+      wireAnalytics(dataLayerName);
+
+      if (!shell || !shell.dataset.dashboardFeed) {
+        return;
+      }
+
+      const statusEl = shell.querySelector("[data-overview-status]");
+      const cacheKey = shell.dataset.cacheKey;
+      const cacheTtl = parseInt(shell.dataset.cacheTtl || "0", 10);
+
+      hydrateFromCache();
+      fetchLiveData();
+
+      function hydrateFromCache() {
+        if (!cacheKey || !window.sessionStorage) {
+          return;
+        }
+        try {
+          const raw = sessionStorage.getItem(cacheKey);
+          if (!raw) {
+            return;
+          }
+          const cached = JSON.parse(raw);
+          if (!cached || !cached.payload || !cached.saved_at) {
+            return;
+          }
+          if (cacheTtl && Date.now() - cached.saved_at > cacheTtl) {
+            sessionStorage.removeItem(cacheKey);
+            return;
+          }
+          updateSnapshots(cached.payload);
+          updateInsights(cached.payload);
+          if (statusEl) {
+            statusEl.textContent = "Loaded from earlier this session.";
+          }
+        } catch (error) {
+          console.warn("Unable to hydrate cached overview", error);
+        }
+      }
+
+      function persistPayload(payload) {
+        if (!cacheKey || !window.sessionStorage) {
+          return;
+        }
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({ saved_at: Date.now(), payload: payload }));
+        } catch (error) {
+          console.warn("Unable to cache overview", error);
+        }
+      }
+
+      function fetchLiveData() {
+        fetch(shell.dataset.dashboardFeed, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Unable to load overview");
+            }
+            return response.json();
+          })
+          .then((payload) => {
+            if (statusEl) {
+              const generated = payload.generated_at ? new Date(payload.generated_at) : new Date();
+              statusEl.textContent = "Updated " + generated.toLocaleTimeString();
+            }
+            updateSnapshots(payload);
+            updateInsights(payload);
+            persistPayload(payload);
+          })
+          .catch((error) => {
+            if (statusEl) {
+              statusEl.textContent = "Live data is unavailable right now.";
+            }
+            console.error(error);
+          });
+      }
+
+      function updateSnapshots(data) {
+        const gpaValue = shell.querySelector("[data-gpa-value]");
+        const gpaBand = shell.querySelector("[data-gpa-band]");
+        if (gpaValue) {
+          gpaValue.textContent = typeof data.avg === "number" ? data.avg.toFixed(2) + "%" : "—";
+        }
+        if (gpaBand) {
+          gpaBand.textContent = data.band ? data.band + " • Rolling average" : "Log your first modules to see trendlines.";
+        }
+
+        const progressValue = shell.querySelector("[data-progress-value]");
+        const progressBar = shell.querySelector("[data-progress-bar]");
+        if (progressValue) {
+          const progress = typeof data.progress === "number" ? Math.min(Math.max(data.progress, 0), 100) : 0;
+          progressValue.textContent = progress.toFixed(0);
+          if (progressBar) {
+            progressBar.style.width = progress + "%";
+          }
+        }
+
+        const aiValue = shell.querySelector("[data-ai-value]");
+        const aiModel = shell.querySelector("[data-ai-model]");
+        const aiConfidence = shell.querySelector("[data-ai-confidence]");
+        if (typeof data.ai_predicted_average === "number") {
+          if (aiValue) {
+            aiValue.textContent = data.ai_predicted_average.toFixed(1) + "%";
+          }
+          if (aiModel) {
+            aiModel.textContent = "Projected via " + (data.ai_model || "Predictive model");
+          }
+          if (aiConfidence) {
+            const confidenceRaw = typeof data.ai_confidence === "number" ? data.ai_confidence : null;
+            const normalized = confidenceRaw !== null ? (confidenceRaw <= 1 ? confidenceRaw * 100 : confidenceRaw) : null;
+            aiConfidence.innerHTML = '<i class="fa-solid fa-wave-square"></i>Confidence ' + (normalized !== null ? Math.round(normalized) + "%" : "—");
+          }
+        } else if (aiValue) {
+          aiValue.textContent = "Upgrade to unlock";
+        }
+      }
+
+      function updateInsights(data) {
+        const list = shell.querySelector("[data-insight-feed]");
+        if (!list) {
+          return;
+        }
+        const emptyState = `
+          <li class="empty-illustration">
+            <svg viewBox="0 0 64 64" role="presentation" aria-hidden="true">
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 44c6-8 12-8 18 0s12 8 18 0"></path>
+              <circle cx="22" cy="26" r="3" fill="currentColor" opacity="0.6"></circle>
+              <circle cx="42" cy="22" r="3" fill="currentColor" opacity="0.4"></circle>
+              <path fill="none" stroke="currentColor" stroke-width="2" d="M8 12h48v40H8z"></path>
+            </svg>
+            <div>
+              <strong>Keep logging progress</strong>
+              <p class="muted">AI insights arrive once you add modules, assessments, and at least one snapshot.</p>
+            </div>
+          </li>`;
+        if (!Array.isArray(data.ai_insights) || !data.ai_insights.length) {
+          list.innerHTML = emptyState;
+          return;
+        }
+        list.innerHTML = "";
+        data.ai_insights.forEach((insight) => {
+          const li = document.createElement("li");
+          const title = document.createElement("strong");
+          title.textContent = insight.title || "AI Insight";
+          const summary = document.createElement("p");
+          summary.textContent = insight.summary;
+          summary.className = "muted";
+          const impact = document.createElement("small");
+          if (typeof insight.impact_score === "number") {
+            impact.textContent = "Impact score " + insight.impact_score.toFixed(2);
+          } else if (insight.tag) {
+            impact.textContent = insight.tag;
+          } else {
+            impact.textContent = "Fresh insight";
+          }
+          li.appendChild(title);
+          li.appendChild(summary);
+          li.appendChild(impact);
+          list.appendChild(li);
+        });
+      }
+
+      function wireAnalytics(layerName) {
+        const targets = document.querySelectorAll("[data-analytics-id]");
+        targets.forEach((target) => {
+          target.addEventListener("click", () => {
+            pushAnalyticsEvent(layerName, {
+              event: "welcome_link_click",
+              label: target.dataset.analyticsId,
+              destination: target.getAttribute("href") || "",
+            });
+          });
+        });
+      }
+
+      function pushAnalyticsEvent(layerName, payload) {
+        if (!layerName) {
+          return;
+        }
+        const layer = (window[layerName] = window[layerName] || []);
+        layer.push(payload);
+      }
+    });
+  </script>
+  {% endif %}
+{% endblock %}

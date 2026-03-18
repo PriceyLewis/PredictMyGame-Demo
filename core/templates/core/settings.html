@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Settings{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/levels.css' %}">
+{% endblock %}
+{% block content %}
+<div class="level-dashboard settings-dashboard">
+  <div class="level-header">
+    <div>
+      <h1>Account settings</h1>
+      <p class="muted">Tune your theme, AI persona, and plan preferences in one place.</p>
+    </div>
+    {% if plan_days_remaining and plan_days_remaining <= 5 %}
+      <div class="alert alert-warning" role="alert" style="margin-bottom:0;">
+        Your plan renews or ends in {{ plan_days_remaining }} day{{ plan_days_remaining|pluralize }}.
+      </div>
+    {% elif plan_cancel_at_end %}
+      <div class="alert alert-warning" role="alert" style="margin-bottom:0;">
+        Your subscription is set to end at the current period close.
+      </div>
+    {% endif %}
+    <div class="badge-ring">
+      <span>Plan</span>
+      <strong>
+        {{ plan_label }}
+      </strong>
+    </div>
+  </div>
+
+  <div class="level-toolbar">
+    <div class="toolbar-meta">
+      {{ request.user.get_full_name|default:request.user.username }}, joined {{ profile.joined_at|date:"d M Y" }} &bull;
+      AI personas available: {% if personas %}{{ personas|length }} presets{% else %}custom preset{% endif %}
+    </div>
+    <div class="level-actions">
+      {% if has_premium_access and not profile.is_trial_active %}
+      <a class="level-btn" href="{% url 'core:manage_subscription' %}">Manage plan</a>
+      {% else %}
+      <a class="level-btn" href="{% url 'core:upgrade' %}">Upgrade plan</a>
+      {% endif %}
+      <a class="level-btn secondary" href="{% url 'core:export_data' %}">Export data</a>
+      <a class="level-btn outline" href="{% url 'core:help' %}">Help center</a>
+    </div>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Account</h3>
+      <p><strong>Username:</strong> {{ user.username }}</p>
+      <p><strong>Email:</strong> {{ user.email|default:"Not set" }}</p>
+      <p><strong>Role:</strong> {{ user_role|title }}</p>
+      {% if user_role == 'admin' %}
+        <p class="muted small">Admin mode enabled &mdash; system health and global analytics are available.</p>
+      {% elif user_role == 'instructor' %}
+        <p class="muted small">Instructor mode &mdash; access class analytics and shared reports.</p>
+      {% else %}
+        <p class="muted small">Student mode &mdash; personalise your assistant and stay on track.</p>
+      {% endif %}
+      <p>Status:
+        <span class="{% if has_premium_access or profile.is_trial_active %}badge-premium{% else %}badge-free{% endif %}">
+          {{ plan_label }}
+        </span>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Preferences</h3>
+      <p class="card-subtitle">Adjust theme, AI persona, and milestone effects.</p>
+
+      <div class="settings-section">
+        <form method="post" action="{% url 'core:update_settings' %}" class="inline-form settings-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="theme">
+          <div class="settings-form__copy">
+            <p class="eyebrow">Theme</p>
+            <p class="muted small">Match PredictMyGrade to your environment.</p>
+          </div>
+          <div class="form-field">
+            <label for="themeSelect" class="label">Preferred theme</label>
+            <select id="themeSelect" name="theme">
+              <option value="dark"{% if theme == 'dark' %} selected{% endif %}>Dark</option>
+              <option value="light"{% if theme == 'light' %} selected{% endif %}>Light</option>
+            </select>
+          </div>
+          <button type="submit" class="btn secondary">Save theme</button>
+        </form>
+
+        <form method="post" action="{% url 'core:update_settings' %}" class="inline-form settings-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="persona">
+          <div class="settings-form__copy">
+            <p class="eyebrow">Assistant</p>
+            <p class="muted small">Swap the coaching tone without changing your data.</p>
+          </div>
+          <div class="form-field">
+            <label for="settingsPersona" class="label">AI assistant persona</label>
+            <select id="settingsPersona" name="persona">
+              {% for persona in personas %}
+                <option value="{{ persona.id }}"{% if current_persona == persona.id %} selected{% endif %} data-description="{{ persona.description|default:''|escape }}">
+                  {{ persona.label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn secondary">Save persona</button>
+        </form>
+        <p id="settingsPersonaDescription" class="muted small settings-note">
+          Choose how the assistant responds to your questions.
+        </p>
+
+        <form method="post" action="{% url 'core:update_settings' %}" class="builder settings-milestone">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="milestones">
+          <div class="settings-form__copy">
+            <p class="eyebrow">Celebrations</p>
+            <p class="muted small">A quick visual reward when you hit key milestones.</p>
+          </div>
+          <label class="settings-toggle" for="milestoneEffectsToggle">
+            <span class="switch-toggle">
+              <input type="checkbox" id="milestoneEffectsToggle" name="milestone_effects"{% if profile.milestone_effects_enabled %} checked{% endif %}>
+              <span class="switch-pill" aria-hidden="true"></span>
+            </span>
+            <div>
+              <strong>Milestone celebrations</strong>
+              <p class="muted small mb-0">
+                Show confetti and subtle unlock animations when you reach progress targets.
+              </p>
+            </div>
+          </label>
+          <button class="btn secondary settings-submit" type="submit">Update milestone settings</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Premium access</h3>
+      {% if has_premium_access and not profile.is_trial_active %}
+        <p>You currently have Premium access{% if trial.since %} (since {{ trial.since|date:"M d, Y" }}){% endif %}.</p>
+        <a href="{% url 'core:manage_subscription' %}" class="btn">Manage subscription</a>
+      {% elif trial and trial.status == 'active_trial' %}
+        <p>Your free trial is active until <strong>{{ trial.ends_at|date:"M d, Y" }}</strong>.</p>
+        <a href="{% url 'core:upgrade' %}" class="btn">Unlock Premium today</a>
+      {% elif trial and trial.status == 'trial_expired' %}
+        <p class="muted">Your trial ended on {{ trial.ended_at|date:"M d, Y" }}. Upgrade anytime to regain premium insights.</p>
+        <a href="{% url 'core:upgrade' %}" class="btn">Upgrade to Premium</a>
+      {% else %}
+        <p class="muted">You're on the free plan.</p>
+        <a href="{% url 'core:upgrade' %}" class="btn">Upgrade to Premium</a>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3>Privacy & data</h3>
+      <p class="card-subtitle">Exercise your GDPR rights&mdash;download exports, manage cookies, or delete your account.</p>
+      <div class="settings-actions">
+        <div class="settings-action">
+          <div class="settings-action__description">
+            <div class="settings-action__title">Privacy dashboard</div>
+            <p class="form-description">
+              Centralise data exports, cookie preferences, and deletion requests.
+            </p>
+          </div>
+          <a class="btn secondary" href="{% url 'core:privacy_dashboard' %}">Open dashboard</a>
+        </div>
+        <div class="settings-action">
+          <div class="settings-action__description">
+            <div class="settings-action__title">Download my data (JSON)</div>
+            <p class="form-description">
+              Grab a machine-readable archive with modules, plans, timelines, and AI chats.
+            </p>
+          </div>
+          <a class="btn" href="{% url 'core:download_personal_data' %}">Download data</a>
+        </div>
+        <div class="settings-action">
+          <div class="settings-action__description">
+            <div class="settings-action__title">Quick CSV export</div>
+            <p class="form-description">
+              Download modules and grades as a spreadsheet snapshot.
+            </p>
+          </div>
+          <a class="btn ghost" href="{% url 'core:export_data' %}">Export CSV</a>
+        </div>
+        <div class="settings-action">
+          <div class="settings-action__description">
+            <div class="settings-action__title">Delete account</div>
+            <p class="form-description">
+              Removes your profile and stored data permanently.
+            </p>
+          </div>
+          <a class="btn danger" href="{% url 'core:delete_account' %}">Delete account</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Report a bug</h3>
+      <p class="card-subtitle">Describe what happened and attach a screenshot so we can investigate quickly.</p>
+      <form method="post" action="{% url 'core:settings_support' %}" class="builder" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="category" value="bug">
+        <input type="hidden" name="page_url" value="{{ current_page_url }}">
+        <label>Subject
+          <input type="text" name="subject" placeholder="e.g. Assignment import failed" required>
+        </label>
+        <label>Severity
+          <select name="severity">
+            <option value="">Select severity</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+        </label>
+        <label>Details
+          <textarea name="message" placeholder="Tell us what you expected and what happened instead." required></textarea>
+        </label>
+        <label>Screenshot
+          <input type="file" name="screenshot" accept="image/*" required>
+        </label>
+        <button type="submit" class="btn secondary">Send bug report</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Requests &amp; feedback</h3>
+      <p class="card-subtitle">Feature ideas or questions? Send them straight to support@predictmygrade.com.</p>
+      <form method="post" action="{% url 'core:settings_support' %}" class="builder">
+        {% csrf_token %}
+        <input type="hidden" name="category" value="feedback">
+        <input type="hidden" name="page_url" value="{{ current_page_url }}">
+        <label>Subject
+          <input type="text" name="subject" placeholder="e.g. Requesting new report format" required>
+        </label>
+        <label>Topic
+          <select name="topic">
+            <option value="">Select a topic</option>
+            <option value="Feature request">Feature request</option>
+            <option value="General question">General question</option>
+            <option value="Account help">Account help</option>
+          </select>
+        </label>
+        <label>Details
+          <textarea name="message" placeholder="Share as much context as you can so we can help quickly." required></textarea>
+        </label>
+        <button type="submit" class="btn secondary">Send message</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>About PredictMyGrade</h3>
+      <p class="card-subtitle">Dive deeper into updates and methodology.</p>
+      <div class="panel-stack">
+        <a href="{% url 'core:whats_new' %}" class="btn secondary">What's new</a>
+        <a href="{% url 'core:how_it_works' %}" class="btn secondary">How predictions work</a>
+        {% if user_role == 'admin' %}
+        <a href="{% url 'core:system_health' %}" class="btn secondary">System health monitor</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  (function () {
+    const personaSelect = document.getElementById('settingsPersona');
+    const personaDescription = document.getElementById('settingsPersonaDescription');
+    if (!personaSelect || !personaDescription) return;
+    const updatePersonaDescription = () => {
+      const option = personaSelect.options[personaSelect.selectedIndex];
+      personaDescription.textContent =
+        (option && option.dataset.description) ||
+        'Choose how the assistant responds to your questions.';
+    };
+    personaSelect.addEventListener('change', updatePersonaDescription);
+    updatePersonaDescription();
+  })();
+</script>
+{% endblock %}

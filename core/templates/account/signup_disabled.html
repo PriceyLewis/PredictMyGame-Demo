@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="theme-dark">
+<head>
+  <meta charset="UTF-8">
+  <title>PredictMyGrade — Sign Up Disabled</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#7c3aed">
+  <link rel="icon" href="{% static 'img/predictmygrade-favicon.svg' %}">
+  <script>
+    (function(){
+      const root = document.documentElement;
+      const saved = localStorage.getItem('predictmygrade-theme');
+      root.classList.remove('theme-dark', 'theme-light');
+      root.classList.add(saved === 'light' ? 'theme-light' : 'theme-dark');
+    })();
+  </script>
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+  <style>
+    html,body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: linear-gradient(180deg,var(--card),var(--card-2));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 2rem 2.5rem;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 25px rgba(124,58,237,0.25);
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--brand-3);
+      margin-bottom: .8rem;
+    }
+    p {
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg,var(--brand),var(--brand-2));
+      color: #fff;
+      padding: .65rem 1.2rem;
+      border-radius: .75rem;
+      text-decoration: none;
+      font-weight: 700;
+      transition: .3s;
+    }
+    .btn:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 0 12px rgba(124,58,237,.4);
+      transform: translateY(-2px);
+    }
+    footer {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" data-aos="fade-up">
+    <h1>🚫 Sign Up Disabled</h1>
+    <p>Direct sign-ups are not available.  
+       Please use one of the secure sign-in options below to create or access your account.</p>
+
+    <a href="{% provider_login_url 'google' %}" class="btn"><i class="fab fa-google"></i> Continue with Google</a><br><br>
+    <a href="{% provider_login_url 'github' %}" class="btn" style="background:#24292e;"><i class="fab fa-github"></i> Continue with GitHub</a><br><br>
+    <a href="{% provider_login_url 'microsoft' %}" class="btn" style="background:#0078d4;"><i class="fab fa-microsoft"></i> Continue with Microsoft</a>
+
+    <footer>© 2025 <strong>BrightTrail Studio</strong></footer>
+  </div>
+
+  <script>AOS.init({ duration:700 });</script>
+</body>
+</html>

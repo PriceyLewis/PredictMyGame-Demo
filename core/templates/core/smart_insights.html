@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Smart Study Insights{% endblock %}
+{% block body_attrs %} class="theme-{{ request.session.theme|default:'dark' }}"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+      document.addEventListener("DOMContentLoaded", () => AOS.init({ duration: 800, once: true }));
+    </script>
+{% endblock %}
+{% block content %}
+<div class="page" data-aos="fade-up">
+    <div class="header">
+      <div class="title">💡 Smart Study Insights</div>
+      <a href="{% url 'core:dashboard' %}" class="btn secondary">← Dashboard</a>
+    </div>
+
+    <div class="card">
+      <h2>Your Current Performance</h2>
+      <p>Average grade across modules: <b>{{ avg_grade }}%</b></p>
+      <canvas id="gradeChart" height="130"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Personalised Tip</h2>
+      <p>{{ tip }}</p>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('gradeChart');
+    const chartData = {
+      labels: [{% for module in modules %}'{{ module.name }}',{% endfor %}],
+      datasets: [{
+        label: 'Grade %',
+        data: [{% for module in modules %}{{ module.grade_percent }},{% endfor %}],
+        borderWidth: 1,
+        backgroundColor: 'rgba(124,58,237,0.6)',
+        borderColor: '#a78bfa'
+      }]
+    };
+    new Chart(ctx, {
+      type: 'bar',
+      data: chartData,
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Train Model – PredictMyGrade{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4">Train Machine Learning Model</h2>
+  <div class="card shadow p-4 mx-auto" style="max-width:600px;">
+    <p>
+      Click the button below to (re)train PredictMyGrade’s prediction model.
+      This uses a small synthetic dataset to bootstrap the algorithm.
+    </p>
+    <button id="trainBtn" class="btn btn-primary w-100">Train Model</button>
+    <p id="trainMsg" class="mt-3 text-center"></p>
+  </div>
+</div>
+
+<script>
+document.getElementById("trainBtn").addEventListener("click", async () => {
+  const msg = document.getElementById("trainMsg");
+  msg.textContent = "Training model...";
+  try {
+    const res = await fetch("/ml/train/", { method: "POST", headers: { "X-CSRFToken": getCookie("csrftoken") } });
+    const data = await res.json();
+    msg.textContent = data.ok ? "✅ Model trained successfully." : "⚠️ Training failed.";
+  } catch (err) {
+    msg.textContent = "❌ Error connecting to server.";
+  }
+});
+
+// helper copied from your app.js
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+}
+</script>
+{% endblock %}

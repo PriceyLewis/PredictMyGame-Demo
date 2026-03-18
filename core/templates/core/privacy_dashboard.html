@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Privacy Dashboard{% endblock %}
+{% block content %}
+<section class="privacy-dashboard">
+  <div class="privacy-hero">
+    <h1>Privacy dashboard</h1>
+    <p class="muted">Manage cookie preferences, download your data, or request deletion at any time.</p>
+  </div>
+
+  <div class="privacy-grid">
+    <article class="privacy-card">
+      <h2>Download your data</h2>
+      <p>Export a machine-readable JSON file plus a quick CSV snapshot of your modules. Exports include grades, timelines, study plans, and AI assistant conversations.</p>
+      <div class="privacy-actions">
+        <a class="btn" href="{% url 'core:download_personal_data' %}">Download JSON export</a>
+        <a class="btn secondary" href="{% url 'core:export_data' %}">Download CSV</a>
+      </div>
+      {% if export_logs %}
+        <p class="muted small" style="margin-top:0.5rem;">
+          Last export: {{ export_logs.0.created_at|date:"d M Y H:i" }} ({{ export_logs.0.format|upper }}, {{ export_logs.0.record_count }} records)
+        </p>
+      {% else %}
+        <p class="muted small" style="margin-top:0.5rem;">You haven&rsquo;t generated an export yet.</p>
+      {% endif %}
+    </article>
+
+    <article class="privacy-card">
+      <h2>Cookie preferences</h2>
+      <p>Need to change your consent choices? Re-open the cookie banner and switch optional analytics on or off, or withdraw consent entirely.</p>
+      <div class="privacy-actions">
+        <button class="btn secondary" type="button" data-cookie-open>Adjust cookies</button>
+        <a class="btn ghost" href="{% url 'core:cookie_notice' %}">View cookie notice</a>
+      </div>
+    </article>
+
+    <article class="privacy-card">
+      <h2>Delete account</h2>
+      <p>Deleting your account removes your profile, modules, AI chats, and study history. Backups are erased within 30 days. This action cannot be undone.</p>
+      <div class="privacy-actions">
+        <a class="btn danger" href="{% url 'core:delete_account' %}">Delete my account</a>
+        <a class="btn ghost" href="mailto:privacy@predictmygrade.com">Contact privacy team</a>
+      </div>
+    </article>
+
+    <article class="privacy-card">
+      <h2>Parental consent &amp; special requests</h2>
+      <p>Users under 18 must provide parental or school consent before we store any personal data. You can upload consent evidence or withdraw previously granted consent at any time.</p>
+      <div class="privacy-actions">
+        <a class="btn" href="mailto:privacy@predictmygrade.com">Email privacy team</a>
+        <a class="btn ghost" href="{% url 'core:privacy_policy' %}">Review privacy policy</a>
+      </div>
+      <p class="muted small" style="margin-top:0.5rem;">We respond within 72 hours and will pause processing until consent is confirmed.</p>
+    </article>
+  </div>
+
+  <article class="privacy-card">
+    <h2>Request history</h2>
+    <p class="muted small">We keep an audit trail of exports and deletions for transparency.</p>
+    <div class="table-responsive">
+      <table class="privacy-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Format / Notes</th>
+            <th>Records</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if export_logs %}
+            {% for entry in export_logs %}
+              <tr>
+                <td>Data export</td>
+                <td>{{ entry.format|upper }}{% if entry.notes %} &middot; {{ entry.notes }}{% endif %}</td>
+                <td>{{ entry.record_count }}</td>
+                <td>{{ entry.created_at|date:"d M Y H:i" }}</td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+          {% if deletion_logs %}
+            {% for entry in deletion_logs %}
+              <tr>
+                <td>Account deletion</td>
+                <td>{{ entry.email|default:"-" }}</td>
+                <td>&mdash;</td>
+                <td>{{ entry.deleted_at|date:"d M Y H:i" }}</td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+          {% if not export_logs and not deletion_logs %}
+            <tr>
+              <td colspan="4">No prior requests recorded.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}

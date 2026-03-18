@@ -1,0 +1,1437 @@
+{% extends "base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block nav_plan_chip %}
+  {% if billing_plan_label %}
+    <span class="plan-chip is-premium">{{ billing_plan_label }}</span>
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
+{% block title %}University Dashboard{% endblock %}
+{% block body_attrs %} class="theme-{{ request.session.theme|default:'dark' }} dashboard-page"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/toastify/toastify.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/aos/aos.css' %}">
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}" defer></script>
+  <script src="{% static 'vendor/toastify/toastify.min.js' %}" defer></script>
+  <script src="{% static 'vendor/aos/aos.js' %}" defer></script>
+  <script id="dashboard-boot" type="application/json">{{ dashboard_bootstrap|default:"{}"|safe }}</script>
+  <script type="module" src="{% static 'js/dashboard/main.js' %}" defer></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      {% if cancellation_notice %}
+      if (window.showToast) {
+        window.showToast("{{ cancellation_notice|escapejs }}", "info");
+      }
+      {% endif %}
+      {% if plan_days_remaining and plan_days_remaining <= 5 %}
+      if (window.showToast) {
+        window.showToast("Your plan renews or ends in {{ plan_days_remaining }} day{{ plan_days_remaining|pluralize }}.", "warning");
+      }
+      {% endif %}
+      {% if plan_cancel_at_end %}
+      if (window.showToast) {
+        window.showToast("Your subscription is set to end at the current period close.", "warning");
+      }
+      {% endif %}
+    });
+  </script>
+{% endblock %}
+{% block content %}
+<div id="globalProgress"></div>
+
+<div class="page page-bottom" data-aos="fade-up">
+  <header class="hero-bar">
+    <div class="hero-meta">
+      <div class="navbar-brand">
+        <a href="{% url 'core:dashboard' %}" class="navbar-logo">
+          <span class="logo-mark">ES</span>
+          <div class="brand-text">
+            <strong>PredictMyGrade</strong>
+            <small>Academic Calculator</small>
+          </div>
+        </a>
+      </div>
+      <div class="navbar-status" data-plan="{{ plan_type }}">
+        <span class="plan-chip {% if has_premium_access %}is-premium{% elif trial_active %}is-trial{% else %}is-free{% endif %}">
+          {% if has_premium_access %}<i class="fa-solid fa-crown"></i> Premium{% elif trial_active %}<i class="fa-solid fa-rocket"></i> Trial Access{% else %}<i class="fa-solid fa-seedling"></i> Free Plan{% endif %}
+          {% if plan_days_remaining %}
+            <span class="muted small">- {{ plan_days_remaining }}d left</span>
+          {% endif %}
+        </span>
+        <span id="lastSyncLabel" class="last-sync" aria-live="polite">
+          Synced moments ago
+          <span id="syncStaleDot" class="sync-stale-dot" aria-hidden="true" hidden></span>
+        </span>
+      </div>
+    </div>
+    <div class="hero-actions">
+      <div class="toolbar">
+        <button class="btn subtle live-indicator" id="syncNowBtn" type="button" data-sync-url="{% url 'core:sync_dashboard' %}">
+          <span class="pulse-dot"></span>
+          <span>Live sync</span>
+        </button>
+        {% if premium_restricted %}
+          <button class="btn primary upgrade-btn" id="navbarUpgradeBtn" data-upgrade-url="{% url 'core:upgrade' %}">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+            <span>Upgrade</span>
+          </button>
+        {% endif %}
+        <a class="btn accent" href="#aiAssistantPanel">
+          <i class="fa-solid fa-comments"></i>
+          <span>AI Assistant</span>
+        </a>
+        <div class="navbar-avatar" aria-label="{{ request.user.get_full_name|default:request.user.username }}">
+          <span class="avatar-circle">{{ request.user.get_full_name|default:request.user.username|slice:':1'|upper }}</span>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <a href="{% url 'core:modules_list' %}" class="btn secondary small" aria-label="Add module">
+          <i class="fa-solid fa-plus"></i>
+          <span>Add Module</span>
+        </a>
+        <a href="{% url 'core:backup_json' %}" class="btn secondary small" aria-label="Backup data">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>Backup</span>
+        </a>
+        <button id="exportDataBtn" class="btn secondary small" type="button" data-export-url="{% url 'core:export_user_data' %}" aria-label="Export data">
+          <i class="fa-solid fa-file-arrow-down"></i>
+          <span>Export</span>
+        </button>
+        <label class="btn secondary small import-trigger" for="importDataInput" aria-label="Import timetable data">
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <span>Import</span>
+          <input type="file" id="importDataInput" accept=".csv" data-import-url="{% url 'core:import_user_data' %}" hidden>
+        </label>
+        <button id="compactModeToggle" class="btn tertiary small" type="button" aria-pressed="false" aria-label="Toggle compact mode">
+          <i class="fa-solid fa-minimize"></i>
+          <span>Compact mode</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="dashboard-strip" aria-label="Dashboard navigation">
+    <div class="strip-links">
+      <a href="#overview">Overview</a>
+      <a href="#planner">Planner</a>
+      <a href="#goals">Goals</a>
+      <a href="#forecast">Forecast</a>
+      <a href="#timeline">Timeline</a>
+      <a href="#ai">AI</a>
+    </div>
+    <details class="strip-switcher">
+      <summary aria-label="Switch study area">
+        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+        <span>Spaces</span>
+      </summary>
+      <div class="strip-switcher__menu">
+        <a href="{% url 'core:dashboard' %}" class="active">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>University</span>
+        </a>
+        <a href="{% url 'core:college' %}">
+          <i class="fa-solid fa-building-columns"></i>
+          <span>College</span>
+        </a>
+        <a href="{% url 'core:gcse' %}">
+          <i class="fa-solid fa-school"></i>
+          <span>GCSE</span>
+        </a>
+        <a href="{% url 'core:modules_list' %}">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>Modules</span>
+        </a>
+        <a href="{% url 'core:snapshot_history' %}">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>History</span>
+        </a>
+        <a href="{% url 'core:settings' %}">
+          <i class="fa-solid fa-sliders"></i>
+          <span>Settings</span>
+        </a>
+        <a href="{% url 'core:logout' %}">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
+        </a>
+      </div>
+    </details>
+  </nav>
+
+  {% if onboarding_cta %}
+    <div class="onboarding-cta-card" data-aos="fade-up">
+      <div>
+        <p class="cta-title">{{ onboarding_cta.title }}</p>
+        <p class="cta-body">{{ onboarding_cta.body }}</p>
+      </div>
+      <div class="cta-actions">
+        <a href="{{ onboarding_cta.action_url }}" class="btn primary">{{ onboarding_cta.action_label }}</a>
+        <a href="{% url 'core:import_user_data' %}" class="btn secondary">Import timetable</a>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="dashboard-shell">
+    <aside class="dashboard-side stacked" id="ai">
+      <div class="ai-hero-header">
+        <div class="section-label section-label--side" aria-hidden="true">AI Coach</div>
+        <h2 class="section-title">AI Coach</h2>
+        <p class="ai-hero-subtitle">Personalised tips and predictions to keep you on track.</p>
+        <div class="ai-quick-strip">
+          <div class="ai-quick-strip__meta">
+            <span class="ai-quick-stat">
+              <i class="fa-solid fa-sparkles" aria-hidden="true"></i>
+              {{ ai_confidence|default_if_none:90|floatformat:0 }}% confidence
+            </span>
+            <span class="muted small">Free previews daily; upgrade for unlimited.</span>
+          </div>
+          <button class="btn ai-accent small" type="button" id="aiQuickTryBtn">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Try AI in 1 click</span>
+          </button>
+        </div>
+      </div>
+      <section class="section-grid ai-grid" aria-label="AI digest and energy">
+        <article class="card card-spacer" id="weeklyDigestCard">
+          <div class="flex-between">
+            <h3><i class="fa-solid fa-newspaper"></i> Weekly AI Digest</h3>
+            <button class="btn ai-accent small" type="button" id="weeklyDigestBtn">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Generate</span>
+            </button>
+          </div>
+          <p id="weeklyDigestSummary" class="muted small">
+            Get a personalised highlight reel for your modules and upcoming focus areas.
+          </p>
+          <ul id="weeklyDigestTips" class="digest-tips">
+            {% if smart_tip %}
+              <li>{{ smart_tip }}</li>
+            {% else %}
+              <li class="muted">Your action tips will appear here after the digest runs.</li>
+            {% endif %}
+          </ul>
+        </article>
+
+        <article class="card card-spacer">
+          <div class="flex-between">
+            <h3><i class="fa-solid fa-sun"></i> Daily Motivation</h3>
+          </div>
+          <p id="dailyMotivationText" class="lead" data-url="{% url 'core:ai_daily_motivation' %}">
+            Loading a fresh quote...
+          </p>
+          <p class="muted small mb-0">Quotes auto-rotate and glow when new motivation lands.</p>
+        </article>
+
+        <article
+          class="card card-spacer"
+          id="studyEnergyCard"
+          data-url="{% url 'core:study_energy_data' %}"
+        >
+          <div class="flex-between">
+            <h3><i class="fa-solid fa-battery-three-quarters"></i> Study Energy</h3>
+            <span id="studyEnergyValue" class="badge">--%</span>
+          </div>
+          <div class="energy-bar">
+            <div id="studyEnergyBar" class="energy-bar__value" style="width: 0%"></div>
+          </div>
+          <p class="muted small mb-0">
+            This score blends recent snapshots and activity so you can plan effort realistically.
+          </p>
+        </article>
+      </section>
+
+      <section class="card card-spacer" data-ml-card>
+        <div class="flex-between">
+          <h3><i class="fa-solid fa-user-graduate"></i> AI Study Mentor</h3>
+          <button class="btn secondary small" type="button" data-mentor-refresh>Refresh</button>
+        </div>
+        <p id="aiTutor" class="ai-text mt-0-4" aria-live="polite" aria-atomic="true">{{ mentor_tip|default:"Analysing your trends..." }}</p>
+      </section>
+
+      <section class="card card-spacer" data-ml-card>
+        <div class="flex-between">
+          <h3>AI Predictions (Adaptive)</h3>
+          <span class="muted small">{{ ai_model_label|default:"Adaptive Ridge" }}</span>
+        </div>
+        <div
+          id="mlForm"
+          data-ml-form
+          role="group"
+          data-js-only-form="true"
+          aria-describedby="mlFormHelper"
+        >
+          {% csrf_token %}
+          <p id="mlFormHelper" class="sr-only">
+            AI prediction form submits via JavaScript; fields will not post the page.
+          </p>
+          <label>Average so far
+            <input type="number" step="0.1" id="avgSoFar" name="avg_so_far" data-avg-input required placeholder="e.g. 64.5">
+          </label>
+          <label>Credits completed
+            <input type="number" step="1" id="creditsDone" name="credits_done" data-credits-input required placeholder="e.g. 60">
+          </label>
+          <button class="btn ai-accent" type="button">Run Prediction</button>
+        </div>
+        <div class="muted small" style="margin-top:0.4rem;">
+          <strong>Confidence:</strong> {{ ai_confidence|default_if_none:90|floatformat:1 }}% -
+          <strong>Personalisation:</strong> {{ personal_weight|default_if_none:0|floatformat:0 }}%
+          {% if ai_status and ai_status.last_retrained_at %}
+            <br><strong>Last retrained:</strong> {{ ai_status.last_retrained_at|localtime|date:"j M Y - H:i" }}
+            <br><strong>RMSE:</strong> Free {{ ai_status.free_accuracy|default:"n/a" }}, Premium {{ ai_status.premium_accuracy|default:"n/a" }}
+          {% endif %}
+        </div>
+        <div id="mlResult" class="muted mt-0-8" data-ml-result>-</div>
+        <p class="muted small" role="note">
+          Predictions are estimates based on your inputs and not guaranteed.
+        </p>
+        <div id="confidenceBarContainer" class="mt-0-6">
+          <div id="confidenceBar" style="height:8px;width:0%;border-radius:10px; background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width 0.8s ease;"></div>
+        </div>
+      </section>
+
+      <section class="card card-spacer" data-ml-card>
+        <h3>AI Mood Indicator</h3>
+        <div id="aiMoodRing" style="position:relative;display:inline-block;width:120px;height:120px;margin-top:1rem;">
+          <svg viewBox="0 0 100 100" style="transform:rotate(-90deg);">
+            <circle cx="50" cy="50" r="45" stroke="var(--border)" stroke-width="8" fill="none" />
+            <circle id="aiMoodProgress" cx="50" cy="50" r="45" stroke="var(--brand)" stroke-width="8"
+                    fill="none" stroke-linecap="round" stroke-dasharray="283"
+                    stroke-dashoffset="283" />
+          </svg>
+          <div id="aiMoodLabel"
+               style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:700;font-size:1.2rem;color:var(--brand-3);">
+            --
+          </div>
+        </div>
+        <p class="muted" id="aiMoodText">Analysing confidence...</p>
+      </section>
+
+      <section
+        id="aiAssistantPanel"
+        class="assistant-panel card card-spacer open"
+        role="region"
+        aria-labelledby="assistantTitle"
+        aria-describedby="assistantPersonaDescription"
+        data-modal="false"
+      >
+        <div id="assistantPremiumFeature" class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}">
+          <div class="premium-feature__content">
+            <div class="assistant-header">
+              <div>
+                <h3 id="assistantTitle">AI Study Assistant</h3>
+                <p id="assistantPersonaDescription" class="muted small"></p>
+              </div>
+            </div>
+
+            <div id="assistantPreviewBanner" class="assistant-preview muted small"{% if has_premium_access %} hidden{% endif %}>
+              {% if has_premium_access %}
+              {% else %}
+                {{ assistant_upgrade_hint }}
+              {% endif %}
+            </div>
+
+            <section class="assistant-controls" aria-live="polite">
+              <label class="assistant-persona-select" for="assistantPersona">
+                <span>Assistant Persona</span>
+                <select id="assistantPersona"></select>
+              </label>
+              <div class="assistant-actions">
+                <button id="assistantReset" class="btn tertiary small" type="button">Reset Chat</button>
+                <button id="voiceMentorBtn" class="btn secondary small" type="button">
+                  <i class="fa-solid fa-headphones"></i>
+                  <span>Hear AI Mentor</span>
+                </button>
+                <button class="btn secondary small" type="button" data-mentor-refresh>
+                  <i class="fa-solid fa-lightbulb"></i>
+                  <span>Refresh Tip</span>
+                </button>
+              </div>
+            </section>
+
+            <section id="assistantMessage" class="assistant-body muted small" aria-live="polite"></section>
+            <div id="assistantChatLog" class="assistant-log" role="log" aria-live="polite" aria-label="AI mentor conversation"></div>
+
+            <form id="assistantForm" class="assistant-footer" autocomplete="off">
+              <textarea
+                id="assistantInput"
+                class="assistant-input"
+                rows="3"
+                placeholder="Ask about grades, goals, or study plans..."
+                aria-label="Send a message to the AI assistant"
+                required
+              ></textarea>
+              <div class="assistant-actions">
+                <button id="assistantSend" class="btn primary" type="submit">
+                  <i class="fa-solid fa-paper-plane"></i>
+                  <span>Send</span>
+                </button>
+                <button id="assistantSpeak" class="btn secondary btn-icon-only" type="button" aria-label="Play the latest tip">
+                  <i class="fa-solid fa-volume-high"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+          {% if not has_premium_access %}
+            <div class="premium-feature__overlay assistant-premium-overlay">
+              <div class="premium-feature__icon"><i class="fa-solid fa-comment-dots"></i></div>
+              <strong>Free users get a daily mentor preview.</strong>
+              <p class="premium-feature__description">
+                Enjoy limited replies each day &mdash; upgrade to unlock unlimited chat, voice guidance, and persona switching.
+              </p>
+              <a href="{% url 'core:upgrade' %}" class="btn premium-feature__cta">Upgrade for AI chat</a>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <p class="ai-footnote">Free previews daily; upgrade for unlimited chat, voice guidance, and persona switching.</p>
+    </aside>
+
+    <div class="section-divider" aria-hidden="true"></div>
+
+    <main class="dashboard-main stacked">
+      <div class="section-label" aria-hidden="true">Overview</div>
+      <h2 class="section-title">Overview</h2>
+      <section class="section-grid columns-3" aria-label="Performance overview" id="overview">
+        <article class="card card-spacer status-card">
+          <div class="flex-between">
+            <h3><i class="fa-solid fa-gauge-high"></i> Current Standing</h3>
+            <span class="muted small">{{ target_label }}</span>
+          </div>
+          <div class="stat-value" id="avgDisplay" aria-live="polite" aria-atomic="true">
+            {% if avg %}{{ avg|floatformat:1 }}%{% else %}--{% endif %}
+          </div>
+          <p id="bandDisplay" class="muted">
+            {{ band|default:"Need more data" }}
+          </p>
+          <div class="progress-track mt-0-8">
+            <div
+              id="progressBar"
+              class="progress-value"
+              style="width: {{ progress_to_target|default:0 }}%;"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="{{ progress_to_target|default:0 }}"
+            ></div>
+          </div>
+          <p class="muted small mb-0">
+            Progress to goal: <strong>{{ progress_to_target|default:0 }}%</strong>
+          </p>
+        </article>
+
+        <article class="card card-spacer">
+          <div class="flex-between">
+            <h3><i class="fa-solid fa-square-poll-vertical"></i> Momentum</h3>
+            <span class="muted small">Last {{ timeline_values|length|default:0 }} snapshots</span>
+          </div>
+          <div class="chart-shell">
+            <canvas id="miniTrend" height="90" aria-label="Mini trend chart"></canvas>
+          </div>
+          <p class="muted small mb-0">Sparkline updates automatically after each snapshot.</p>
+        </article>
+
+        <article class="card card-spacer">
+          <div class="flex-between">
+            <h3><i class="fa-solid fa-scale-balanced"></i> Cohort Comparison</h3>
+            <span class="muted small">GCSE -> College -> University</span>
+          </div>
+          <div class="chart-shell">
+            <canvas id="compareChart" height="160" aria-label="Compare averages across levels"></canvas>
+          </div>
+          <p class="muted small mb-0">
+            {% if benchmarking %}
+              Cohort avg {{ benchmarking.cohort_avg|default:"--" }}% - Delta {{ benchmarking.delta|default:"--" }}%
+            {% else %}
+              Add modules at other levels to unlock richer comparisons.
+            {% endif %}
+          </p>
+        </article>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <div id="planner" class="section-label" aria-hidden="true">Planner</div>
+      <h2 class="section-title">Planner</h2>
+      <section class="card card-spacer dashboard-view-optional" aria-labelledby="plannerHeader" id="dashboardPlannerGrid" data-view="expanded">
+        <div class="flex-between">
+          <div>
+            <h3 id="plannerHeader"><i class="fa-solid fa-compass-drafting"></i> Target Planner</h3>
+            <p class="muted small mb-0">Set your goal, plot modules, sync deadlines, and export the calendar.</p>
+          </div>
+          <div class="toolbar" style="gap:0.4rem;">
+            <button
+              id="plannerViewToggle"
+              class="btn secondary small"
+              type="button"
+              data-view="expanded"
+              aria-pressed="false"
+            >
+              <i class="fa-solid fa-compress-alt" aria-hidden="true"></i>
+              <span>Show compact view</span>
+            </button>
+            <button class="btn accent small" type="button" id="aiGeneratePlanBtn">
+              <i class="fa-solid fa-robot"></i>
+              <span>Generate My Study Plan</span>
+            </button>
+          </div>
+        </div>
+        <p class="planner-grid__alert" role="status">
+          Compact view keeps the planner focus on your goals; expand again to see deadlines, study plans,
+          insights, and comparisons.
+        </p>
+        <div
+          id="targetPlannerForm"
+          role="group"
+          data-js-only-form="true"
+          aria-describedby="plannerFormHelper"
+        >
+          {% csrf_token %}
+          <p id="plannerFormHelper" class="sr-only">
+            Planner controls are handled with JavaScript and recalculate automatically.
+          </p>
+          <div class="planner-controls">
+            <label>
+              <span class="label">Target class</span>
+              <select id="targetClassSelect" name="target_class" class="input-field">
+                <option value="First" {% if target_label == "First" %}selected{% endif %}>First</option>
+                <option value="Upper Second (2:1)" {% if target_label == "Upper Second (2:1)" %}selected{% endif %}>Upper Second (2:1)</option>
+                <option value="Lower Second (2:2)" {% if target_label == "Lower Second (2:2)" %}selected{% endif %}>Lower Second (2:2)</option>
+                <option value="Third" {% if target_label == "Third" %}selected{% endif %}>Third</option>
+              </select>
+            </label>
+            <label>
+              <span class="label">Total credits</span>
+              <input
+                id="totalCreditsInput"
+                name="total_credits"
+                type="number"
+                min="60"
+                max="240"
+                class="input-field"
+                value="{{ planner_total_goal|default:120 }}"
+              >
+            </label>
+            <button class="btn primary small" type="button" data-planner-recalc>
+              <i class="fa-solid fa-arrow-rotate-right"></i>
+              <span>Recalculate</span>
+            </button>
+            <span id="plannerSaveStatus" class="muted small" role="status" aria-live="polite"></span>
+          </div>
+          <div class="planner-metrics">
+            <div>
+              <span class="muted small">Goal credits</span>
+              <strong id="futureCreditsGoal">{{ planner_total_goal|default:120 }}</strong>
+            </div>
+            <div>
+              <span class="muted small">Credits planned</span>
+              <strong id="futureCreditsTotal">0</strong>
+            </div>
+            <div>
+              <span class="muted small">Expected average</span>
+              <strong id="futureExpectedAverage">--</strong>
+            </div>
+            <div>
+              <span class="muted small">Credits completed</span>
+              <strong id="totalCreditsDisplay">{{ completedCredits|default:0|floatformat:1 }}</strong>
+            </div>
+            <div>
+              <span class="muted small">Credits remaining</span>
+              <strong
+                id="remainingCreditsDisplay"
+                data-total="{{ planner_total_goal|default:120 }}"
+                data-completed="{{ completedCredits|default:0 }}"
+              >--</strong>
+            </div>
+            <div>
+              <span class="muted small">Workload (hrs)</span>
+              <strong id="plannerWorkloadTotal">{{ planner_workload_total|default:0|floatformat:1 }}</strong>
+            </div>
+          </div>
+          <div class="planner-progress">
+            <div class="planner-progress__track">
+              <div
+                id="plannerProgressBar"
+                class="planner-progress__value"
+                style="width: {{ progress_to_target|default:0 }}%;"
+              ></div>
+            </div>
+            <p class="muted small mb-0">
+              Progress to target: {{ progress_to_target|default:0 }}%
+            </p>
+          </div>
+          <p id="plannerSummary" class="muted small mt-0-8">
+            {% if planner_summary %}
+              Tracking {{ planner_summary|length }} term{{ planner_summary|length|pluralize }} with {{ planner_workload_total|floatformat:1 }} hrs of upcoming work.
+            {% else %}
+              Add future modules below to estimate what it will take to hit your goal.
+            {% endif %}
+          </p>
+          <div id="plannerAlerts" class="muted small planner-flags" role="status" aria-live="polite"></div>
+          <p id="plannerChangeSummary" class="muted small mt-0-6"></p>
+          <div id="plannerUndo" class="muted small"></div>
+        </div>
+
+        <div class="section-grid columns-2" style="margin-top:0.6rem;">
+          <article class="card card-spacer" style="margin:0;">
+            <div class="flex-between">
+              <h4 id="futureModulesHeading" class="mb-0">Future Modules</h4>
+              <button class="btn secondary small" type="button" id="addFutureModuleBtn">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add row</span>
+              </button>
+            </div>
+            <p class="sr-only" id="futureModulesInstructions">
+              Add planned modules, credits, target percentage, term, category, status, and expected workload hours.
+            </p>
+            <div class="table-scroll">
+              <table
+                id="futureModulesTable"
+                class="planner-table"
+                role="group"
+                aria-labelledby="futureModulesHeading"
+                aria-describedby="futureModulesInstructions"
+              >
+                <thead>
+                  <tr>
+                    <th scope="col">Module</th>
+                    <th scope="col">Credits</th>
+                    <th scope="col">Target %</th>
+                    <th scope="col">Term</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Workload (hrs)</th>
+                    <th scope="col" class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Rows injected by planner.js -->
+                </tbody>
+              </table>
+            </div>
+            <p class="muted small mt-0-6">
+              Planner autosaves as you edit and syncs with AI projections instantly.
+            </p>
+          </article>
+
+          <article class="card card-spacer" style="margin:0;">
+            <div class="flex-between">
+              <h4 id="futureDeadlinesHeading" class="mb-0">Upcoming Deadlines</h4>
+              <button class="btn secondary small" type="button" id="addFutureDeadlineBtn">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add deadline</span>
+              </button>
+              <span id="futureDeadlinesStatus" class="muted small" role="status" aria-live="polite"></span>
+            </div>
+            <p class="sr-only" id="futureDeadlinesInstructions">
+              Add upcoming deadlines with title, due date, weight, and related module.
+            </p>
+            <div class="table-scroll">
+              <table
+                id="plannedDeadlinesTable"
+                class="planner-table"
+                role="group"
+                aria-labelledby="futureDeadlinesHeading"
+                aria-describedby="futureDeadlinesInstructions"
+              >
+                <thead>
+                  <tr>
+                    <th scope="col">Title</th>
+                    <th scope="col">Due date</th>
+                    <th scope="col">Weight</th>
+                    <th scope="col">Module</th>
+                    <th scope="col" class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Deadlines injected by planner.js -->
+                </tbody>
+              </table>
+            </div>
+            <p class="muted small mt-0-6">Stay ahead of crunch weeks by mapping them alongside your modules.</p>
+          </article>
+        </div>
+
+        <div class="section-grid columns-2 compact-hidden" style="margin-top:0.6rem;">
+          <article class="card card-spacer" aria-labelledby="plannerTermSummaryHeading">
+            <div class="flex-between">
+              <h4 id="plannerTermSummaryHeading" class="mb-0">Term Summary</h4>
+            </div>
+            <ul id="plannerTermSummary" class="summary-list">
+              <li class="muted">Add modules to see per-term planning stats.</li>
+            </ul>
+          </article>
+
+          <article class="card card-spacer" aria-labelledby="plannerStatusSummaryHeading">
+            <div class="flex-between">
+              <h4 id="plannerStatusSummaryHeading" class="mb-0">Status Summary</h4>
+            </div>
+            <ul id="plannerStatusSummary" class="summary-list">
+              <li class="muted">Statuses will appear once modules are added.</li>
+            </ul>
+          </article>
+        </div>
+
+        {% now "Y-m-d" as today_iso %}
+        <article class="card card-spacer compact-hidden" style="margin-top:0;">
+          <div class="flex-between">
+            <h4 class="mb-0">Manual Study Plan</h4>
+          </div>
+          <form id="studyPlanForm" class="stacked-form" method="post" action="{% url 'core:add_study_plan' %}">
+            {% csrf_token %}
+            <div class="form-grid">
+              <label>
+                <span class="label">Session title</span>
+                <input type="text" name="title" required placeholder="e.g. Mock paper review">
+              </label>
+              <label>
+                <span class="label">Date</span>
+                <input type="date" name="date" value="{{ today_iso }}" required>
+              </label>
+              <label>
+                <span class="label">Duration (hrs)</span>
+                <input type="number" name="duration_hours" min="0.5" step="0.25" value="1.5" required>
+              </label>
+            </div>
+            <button class="btn primary" type="submit">
+              <i class="fa-solid fa-plus"></i>
+              <span>Add plan item</span>
+            </button>
+            <p class="muted small mb-0">
+              Tip: generate an AI plan first, then add any bespoke sessions here.
+            </p>
+          </form>
+        </article>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <div class="section-label" aria-hidden="true">Goals</div>
+      <h2 class="section-title">Goals &amp; Comparison</h2>
+      <section class="section-grid columns-2" aria-label="Goals and comparison" id="goals">
+        <article class="card card-spacer dashboard-view-optional" aria-labelledby="goalsHeading">
+          <div class="flex-between">
+            <h3 id="goalsHeading"><i class="fa-solid fa-flag-checkered"></i> Study Goals</h3>
+            <button class="btn secondary small" type="button" id="goalsRefresh">
+              <i class="fa-solid fa-rotate"></i>
+              <span>Refresh</span>
+            </button>
+          </div>
+          <div class="goals-summary" id="goalsSummary">
+            <div>
+              <span class="muted small">Total</span>
+              <strong data-goal-summary="total">{{ goals_summary.total }}</strong>
+            </div>
+            <div>
+              <span class="muted small">Active</span>
+              <strong data-goal-summary="active">{{ goals_summary.active }}</strong>
+            </div>
+            <div>
+              <span class="muted small">Completed</span>
+              <strong data-goal-summary="completed">{{ goals_summary.completed }}</strong>
+            </div>
+            <div>
+              <span class="muted small">Due soon</span>
+              <strong data-goal-summary="due_soon">{{ goals_summary.due_soon }}</strong>
+            </div>
+            <div>
+              <span class="muted small">Average progress</span>
+              <strong data-goal-summary="average_progress">{{ goals_summary.average_progress }}%</strong>
+            </div>
+          </div>
+          <div
+            id="goalForm"
+            class="stacked-form"
+            role="group"
+            data-js-only-form="true"
+            aria-describedby="goalFormHelper"
+          >
+            {% csrf_token %}
+            <p id="goalFormHelper" class="sr-only">
+              Goal creation is handled instantly with JavaScript; submission will not reload the page.
+            </p>
+            <div class="form-grid">
+              <label>
+                <span class="label">Goal title</span>
+                <input type="text" id="goalText" name="goal_title" placeholder="Finish literature review" required>
+              </label>
+              <label>
+                <span class="label">Due date</span>
+                <input type="date" id="goalDue" name="goal_due">
+              </label>
+              <label>
+                <span class="label">Category</span>
+                <select id="goalCategory" name="goal_category">
+                  <option value="academic">Academic</option>
+                  <option value="assessment">Assessment</option>
+                  <option value="habit">Study Habit</option>
+                  <option value="application">Application</option>
+                </select>
+              </label>
+              <label>
+                <span class="label">Module</span>
+                <input type="text" id="goalModule" name="goal_module" placeholder="Optional module tag">
+              </label>
+              <label>
+                <span class="label">Target %</span>
+                <input type="number" id="goalTarget" name="goal_target" min="0" max="100" step="0.5" placeholder="e.g. 68">
+              </label>
+            </div>
+            <button class="btn primary" type="button" data-goal-submit>
+              <i class="fa-solid fa-plus"></i>
+              <span>Add goal</span>
+            </button>
+          </div>
+          <p id="goalListEmpty" class="muted" {% if study_goals %}hidden{% endif %}>
+            Add your first goal to get personalised nudges.
+          </p>
+          <ul id="goalList" class="goal-list">
+            {% for goal in study_goals %}
+              <li class="goal-item" data-goal-id="{{ goal.id }}">
+                <div class="goal-item__header">
+                  <div class="goal-item__title">
+                    {{ goal.title }}
+                    {% if goal.module_name %}
+                      <span class="goal-tag">{{ goal.module_name }}</span>
+                    {% endif %}
+                  </div>
+                  <div class="goal-actions">
+                    <span class="goal-status-badge">{{ goal.get_status_display|default:goal.status|title }}</span>
+                    <select class="input-field goal-status-select" data-goal-status>
+                      <option value="planning" {% if goal.status == "planning" %}selected{% endif %}>Planning</option>
+                      <option value="active" {% if goal.status == "active" %}selected{% endif %}>In Progress</option>
+                      <option value="completed" {% if goal.status == "completed" %}selected{% endif %}>Completed</option>
+                      <option value="paused" {% if goal.status == "paused" %}selected{% endif %}>Paused</option>
+                    </select>
+                    <button class="btn secondary small" data-goal-complete {% if goal.status == "completed" %}disabled{% endif %}>Mark Complete</button>
+                    <button class="btn secondary small" data-goal-delete>Delete</button>
+                  </div>
+                </div>
+                <div class="goal-item__meta">
+                  <span class="goal-tag">{{ goal.get_category_display|default:goal.category|default:"General"|title }}</span>
+                  {% if goal.due_date %}
+                    <span class="goal-due">
+                      Due {{ goal.due_date|date:"M j" }}
+                    </span>
+                  {% else %}
+                    <span class="goal-due muted">No due date</span>
+                  {% endif %}
+                  {% if goal.target_percent %}
+                    <span>Target {{ goal.target_percent|floatformat:1 }}%</span>
+                  {% endif %}
+                </div>
+                <div class="goal-progress">
+                  <input type="range" min="0" max="100" value="{{ goal.progress }}" data-goal-progress {% if goal.status == "completed" %}disabled{% endif %}>
+                  <span class="goal-progress__value">{{ goal.progress }}%</span>
+                </div>
+                {% if goal.description %}
+                  <p class="goal-item__description">{{ goal.description }}</p>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </article>
+
+        <article class="card card-spacer dashboard-view-optional" aria-labelledby="comparisonHeading">
+          <div class="flex-between">
+            <h3 id="comparisonHeading"><i class="fa-solid fa-chart-line"></i> Snapshot Comparison</h3>
+            <button class="btn secondary small" type="button" id="refreshComparisonBtn">
+              <i class="fa-solid fa-rotate"></i>
+              <span>Refresh</span>
+            </button>
+          </div>
+          <ul id="snapshotComparisonList" class="comparison-list">
+            {% for item in comparison_data %}
+              <li>
+                <span>{{ item.label }}</span>
+                <strong class="{% if item.change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                  {{ item.change|floatformat:1 }}%
+                </strong>
+              </li>
+            {% empty %}
+              <li class="muted">Capture at least two snapshots to unlock comparisons.</li>
+            {% endfor %}
+          </ul>
+        </article>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <div class="section-label" aria-hidden="true">Forecast</div>
+      <h2 class="section-title">Forecast &amp; Calendar</h2>
+      <section class="section-grid columns-2" aria-label="Forecast and calendar" id="forecast">
+        <div class="premium-feature {% if premium_restricted %}premium-feature--locked{% endif %}" data-premium-lock="forecast">
+          <div class="premium-feature__content card card-spacer">
+            <div class="flex-between">
+              <h3><i class="fa-solid fa-wave-square"></i> AI Forecast for Next Week <span class="premium-pill">Premium</span></h3>
+              <span id="forecastRefreshed" class="muted small">Refreshed just now</span>
+            </div>
+            {% if not has_premium_access %}
+              <div class="locked-preview">
+                <p class="muted small">Preview: AI projects your next weekly average with a confidence band.</p>
+                <div class="chart-shell sample-chart">
+                  <div style="display:flex;gap:6px;align-items:flex-end;height:110px;">
+                    <div style="width:10px;height:36px;background:#2a214b;border-radius:6px;"></div>
+                    <div style="width:10px;height:64px;background:#3d2f63;border-radius:6px;"></div>
+                    <div style="width:10px;height:92px;background:#5b45a1;border-radius:6px;"></div>
+                    <div style="width:10px;height:70px;background:#7c3aed;border-radius:6px;"></div>
+                    <div style="width:10px;height:82px;background:#a78bfa;border-radius:6px;"></div>
+                  </div>
+                </div>
+                <ul class="muted small" style="margin-top:0.4rem;">
+                  <li>Early warning when upcoming deadlines risk dropping your average.</li>
+                  <li>Confidence score driven by recent snapshots and study load.</li>
+                </ul>
+                <a href="{% url 'core:upgrade' %}" class="btn tertiary small" data-upgrade-url="{% url 'core:upgrade' %}">Compare plans</a>
+              </div>
+            {% elif timeline_values and ai_predicted_average %}
+              <div class="chart-shell">
+                <canvas id="forecastChart" title="Forecast and historical grade timeline" height="120" data-history='{{ timeline_values|escapejs }}' data-prediction="{{ ai_predicted_average|default:0 }}" data-confidence="{{ ai_confidence|default_if_none:90 }}" data-model='{{ ai_model_label|default:'Adaptive model'|escapejs }}'></canvas>
+              </div>
+              <p id="forecastSummary" class="muted mt-0-6"></p>
+            {% else %}
+              <p class="muted">No forecast yet - capture more weekly data for AI predictions.</p>
+            {% endif %}
+            <div class="chart-shell">
+              <canvas id="confidenceTrend" title="Confidence indicator trend" height="40" class="mt-0-6"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}" id="plannerCalendarCard">
+          <div class="premium-feature__content card card-spacer">
+            <div class="flex-between calendar-card__header">
+              <h3><i class="fa-solid fa-calendar-plus"></i> Study Plan Calendar <span class="premium-pill">Premium</span></h3>
+              {% if has_premium_access %}
+                <div class="calendar-card__actions">
+                  <a href="{{ study_plan_calendar_path }}" class="btn secondary" id="plannerIcsDownload" data-calendar-url="{{ study_plan_calendar_url }}">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download .ics</span>
+                  </a>
+                  <a href="{{ study_plan_calendar_path }}?target=google" class="btn accent" id="plannerGoogleSync" data-calendar-url="{{ study_plan_calendar_url }}">
+                    <i class="fa-brands fa-google"></i>
+                    <span>Add to Google</span>
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+            {% if has_premium_access %}
+              <p class="muted small" id="weeklyCalendarHint">Upcoming sessions will sync automatically after you regenerate a plan.</p>
+              <div id="weeklyCalendar" class="weekly-calendar"></div>
+              <button type="button" class="btn tertiary" id="plannerCopyLink" data-calendar-url="{{ study_plan_calendar_url }}">
+                <i class="fa-solid fa-link"></i>
+                <span>Copy subscribe link</span>
+              </button>
+            {% else %}
+              <p class="muted small">Preview: sync your study sessions to Google Calendar, Outlook, or Apple in one click.</p>
+              <div class="chart-shell sample-calendar" aria-hidden="true" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">
+                {% for _ in "1234567" %}
+                  <div style="background:#241c3f;border-radius:6px;height:48px;display:flex;align-items:center;justify-content:center;color:#a78bfa;font-size:0.8rem;">{{ forloop.counter }}</div>
+                {% endfor %}
+              </div>
+              <ul class="muted small" style="margin-top:0.4rem;">
+                <li>Auto-updates whenever you regenerate an AI plan.</li>
+                <li>Share a read-only .ics link with tutors or study partners.</li>
+              </ul>
+              <a href="{% url 'core:upgrade' %}" class="btn tertiary small" data-upgrade-url="{% url 'core:upgrade' %}">Compare plans</a>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <section class="section-grid columns-2" aria-label="Target and radar charts">
+        <article class="card card-spacer">
+          <h3><i class="fa-solid fa-bullseye"></i> Target Progress</h3>
+          <p class="muted small">How today's average compares to what you need to hit your goal.</p>
+          <div class="chart-shell">
+            <canvas id="targetChart" title="Target progress" height="180"></canvas>
+          </div>
+        </article>
+        <article class="card card-spacer">
+          <h3><i class="fa-solid fa-atom"></i> Subject Radar</h3>
+          <p class="muted small">Spread of grades across your latest modules.</p>
+          <div class="chart-shell">
+            <canvas id="subjectRadar" title="Subject performance radar" height="220"></canvas>
+          </div>
+        </article>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <h2 class="section-title">Benchmarking &amp; Insights</h2>
+      <button class="btn tertiary small collapsible-toggle" type="button" data-collapse-target="insightsCollapse" data-collapse-show-label="Show insights" data-collapse-hide-label="Hide insights">
+        Show insights
+      </button>
+      <div id="insightsCollapse" class="collapsible-content" hidden>
+        <section class="section-grid columns-2" aria-label="Benchmarking and insights">
+          <div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}">
+            <div class="premium-feature__content card card-spacer">
+              <h3><i class="fa-solid fa-chart-column"></i> Benchmark Pack <span class="premium-pill">Premium</span></h3>
+              {% if benchmarking_pack %}
+                <div class="benchmark-stats">
+                  <span><strong>Median cohort:</strong> {{ benchmarking_pack.percentiles.p50 }}%</span>
+                  <span><strong>Top quartile:</strong> {{ benchmarking_pack.percentiles.p75 }}%</span>
+                  <span><strong>Top 10%:</strong> {{ benchmarking_pack.percentiles.p90 }}%</span>
+                </div>
+                <p class="muted small">Gap to top quartile: {{ benchmarking_pack.gap_to_top }}%</p>
+                <div class="benchmark-routes">
+                  {% for route in benchmarking_pack.routes %}
+                    <div class="benchmark-route">
+                      <strong>{{ route.title }}</strong>
+                      <p class="muted">{{ route.detail }}</p>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% elif not has_premium_access %}
+                <div class="locked-preview">
+                  <p class="muted small">Preview what unlocks with Benchmark Pack:</p>
+                  <ul class="muted small">
+                    <li>Percentile ranks versus peers plus gap-to-target.</li>
+                    <li>Action routes to close the gap before key deadlines.</li>
+                    <li>Top 10% and median lines plotted on your charts.</li>
+                  </ul>
+                  <a href="{% url 'core:upgrade' %}" class="btn tertiary small" data-upgrade-url="{% url 'core:upgrade' %}">Compare plans</a>
+                </div>
+              {% else %}
+                <p class="muted small">
+                  Premium benchmarking compares your results to the wider cohort and highlights gaps to the top.
+                </p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}">
+            <div class="premium-feature__content card card-spacer">
+              <div class="flex-between">
+                <h3><i class="fa-solid fa-lightbulb"></i> AI Insights <span class="premium-pill">Premium</span></h3>
+                <button
+                  class="btn secondary small"
+                  type="button"
+                  id="aiInsightsRefresh"
+                  {% if not has_premium_access %}disabled{% endif %}
+                >
+                  <i class="fa-solid fa-rotate"></i>
+                  <span>Refresh</span>
+                </button>
+                <span id="insightsRefreshed" class="muted small">Refreshed just now</span>
+              </div>
+              <ul id="aiInsightsList" class="insights-list">
+                {% if ai_insights %}
+                  {% for insight in ai_insights %}
+                    <li class="insight-item">
+                      <div class="insight-title">{{ insight.title }}</div>
+                      <p>{{ insight.summary }}</p>
+                    </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="muted">Insights will appear here after the next analysis run.</li>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <h2 class="section-title">Habits &amp; Activity</h2>
+      <section class="section-grid columns-2" aria-label="Habits and weekly activity">
+        <article class="card card-spacer">
+          <h3><i class="fa-solid fa-list-check"></i> Weekly Goals</h3>
+          <p class="muted small">Completion rate for recent weeks.</p>
+          <div class="chart-shell">
+            <canvas id="weeklyGoalsChart" title="Weekly goals completion" height="160"></canvas>
+          </div>
+        </article>
+        <article class="card card-spacer">
+          <h3><i class="fa-solid fa-heart-pulse"></i> Study Habits</h3>
+          <p class="muted small">Hours logged per week.</p>
+          <div class="chart-shell">
+            <canvas id="habitChart" title="Study habits trend" height="160"></canvas>
+          </div>
+        </article>
+        <article class="card card-spacer">
+          <h3><i class="fa-solid fa-chart-column"></i> Weekly Activity</h3>
+          <p class="muted small">Planned study time for the current week.</p>
+          <div class="chart-shell">
+            <canvas id="weeklyChart" title="Weekly activity chart" height="160"></canvas>
+          </div>
+        </article>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <div class="section-label" aria-hidden="true">Timeline</div>
+      <h2 class="section-title">Timeline &amp; Activity</h2>
+      <section class="card card-spacer" aria-label="Performance timeline" id="timeline">
+        <div class="flex-between">
+          <div>
+            <h3><i class="fa-solid fa-chart-line"></i> Performance Over Time</h3>
+            <p id="timelineDelta" class="timeline-delta neutral">
+              <i class="fa-solid fa-minus"></i>
+              <span>Trend data will appear once snapshots exist.</span>
+            </p>
+          </div>
+          <div class="timeline-toolbar" role="group" aria-label="Performance time range">
+            <div class="timeline-controls">
+              <button type="button" class="active" data-timeline-range="4" aria-pressed="true">4W</button>
+              <button type="button" data-timeline-range="12" aria-pressed="false">12W</button>
+              <button type="button" data-timeline-range="24" aria-pressed="false">24W</button>
+              <button type="button" data-timeline-range="all" aria-pressed="false">All</button>
+            </div>
+            <button id="takeSnapshotBtn" class="btn secondary small" type="button" data-snapshot-trigger>
+              <i class="fa-solid fa-camera"></i>
+              <span>Take Snapshot</span>
+            </button>
+          </div>
+        </div>
+        {% if timeline_labels and timeline_values %}
+          <div class="chart-shell">
+            <canvas id="performanceChart" title="Snapshot averages over time" height="120"></canvas>
+          </div>
+        {% else %}
+          <p class="muted">No snapshots yet - click "Take Snapshot" to begin tracking progress.</p>
+        {% endif %}
+      </section>
+
+      <button class="btn tertiary small collapsible-toggle" type="button" data-collapse-target="aiTimelineCollapse" data-collapse-show-label="Show AI timeline" data-collapse-hide-label="Hide AI timeline">
+        Show AI timeline
+      </button>
+      <div id="aiTimelineCollapse" class="collapsible-content" hidden>
+        <section class="card card-spacer timeline-card" data-ml-card aria-label="AI progress timeline">
+          <div class="timeline-card__header">
+            <h3>AI Progress Timeline</h3>
+            <button class="btn tertiary btn-icon-only" type="button" id="timelineRefreshBtn" aria-label="Refresh timeline" data-sync-url="{% url 'core:sync_dashboard' %}">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
+          </div>
+          <div id="timelineStream" class="timeline-stream" data-empty="{% if timeline_events %}0{% else %}1{% endif %}">
+            {% for event in timeline_events %}
+              <article class="timeline-event" data-event-id="{{ event.id }}" data-event-type="{{ event.type }}">
+                <div class="timeline-icon">
+                  {% if event.type == 'module_added' %}
+                    <i class="fa-solid fa-square-plus"></i>
+                  {% elif event.type == 'module_removed' %}
+                    <i class="fa-solid fa-square-minus"></i>
+                  {% elif event.type == 'goal_completed' %}
+                    <i class="fa-solid fa-flag-checkered"></i>
+                  {% elif event.type == 'snapshot_taken' %}
+                    <i class="fa-solid fa-camera"></i>
+                  {% else %}
+                    <i class="fa-solid fa-circle"></i>
+                  {% endif %}
+                </div>
+                <div class="timeline-content">
+                  <p>{{ event.message }}</p>
+                  <time datetime="{{ event.created_at }}">{{ event.display_time }}</time>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+          <p id="timelineEmptyState" class="muted"{% if timeline_events %} hidden{% endif %}>
+            No timeline activity yet. Capture a snapshot or complete a study goal to see updates here.
+          </p>
+        </section>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <h2 class="section-title">Modules</h2>
+      <section class="card card-spacer" data-aos="fade-up" id="moduleLibraryCard">
+        <div class="flex-between">
+          <h3><i class="fa-solid fa-layer-group"></i> Module Library</h3>
+          <label class="sr-only" for="moduleSearch">Filter modules</label>
+          <input
+            id="moduleSearch"
+            type="search"
+            class="input-field"
+            placeholder="Filter modules"
+            autocomplete="off"
+          >
+        </div>
+        <p class="muted small" data-compact-note>
+          Compact mode hides module details. Toggle it off to see the full top 5 list.
+        </p>
+        <div class="compact-hidden">
+          <ul id="moduleList" class="module-list">
+            {% for module in modules|slice:":5" %}
+              <li>
+                <div>
+                  <strong>{{ module.name }}</strong>
+                  {% if module.level %}<span class="badge subtle">{{ module.get_level_display|default:module.level }}</span>{% endif %}
+                </div>
+                <div class="module-list__meta">
+                  <span>{{ module.credits|default_if_none:0 }} credits</span>
+                  <span class="module-grade">{{ module.grade_percent|default_if_none:"--"|floatformat:1 }}%</span>
+                  <span>{{ module.created_at|date:"M j" }}</span>
+                  <button
+                    class="btn tertiary small module-inline-edit"
+                    type="button"
+                    data-url="{% url 'core:module_update' module.pk %}"
+                    data-grade="{{ module.grade_percent|default_if_none:'' }}"
+                  >
+                    <i class="fa-solid fa-pen"></i>
+                    <span>Edit grade</span>
+                  </button>
+                </div>
+              </li>
+            {% empty %}
+              <li class="muted">Add modules to see quick stats and use the planner below.</li>
+            {% endfor %}
+          </ul>
+          <div class="muted-inline mt-0-6">
+            Showing recent modules - keep logging assessments so comparison and planner analytics stay fresh.
+            <a class="btn tertiary small" href="{% url 'core:modules_list' %}" style="margin-left:0.4rem;">View all modules</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-spacer" data-aos="fade-up" id="dashboardDeadlines">
+        <div class="flex-between">
+          <h3><i class="fa-solid fa-bell"></i> Upcoming Deadlines</h3>
+          <span class="muted small">Mark items off as you finish them.</span>
+        </div>
+        <div class="table-scroll">
+          <table class="planner-table">
+            <thead>
+              <tr>
+                <th scope="col">Title</th>
+                <th scope="col">Due date</th>
+                <th scope="col">Due in</th>
+                <th scope="col">Module</th>
+                <th scope="col" class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for deadline in deadlines %}
+                <tr data-deadline-id="{{ deadline.pk }}" data-due="{{ deadline.due_date|date:'c' }}">
+                  <td>
+                    <div class="deadline-title">
+                      <span class="deadline-title__text">{{ deadline.title }}</span>
+                      <button
+                        class="btn tertiary small inline-edit-deadline"
+                        type="button"
+                        data-url="{% url 'core:deadline_update' deadline.pk %}"
+                        data-field="title"
+                      >
+                        <i class="fa-solid fa-pen"></i>
+                        <span>Edit</span>
+                      </button>
+                    </div>
+                    <div class="muted small">
+                      Weight: <span class="deadline-weight">{{ deadline.weight|default_if_none:0 }}</span>
+                      <button
+                        class="btn tertiary small inline-edit-deadline"
+                        type="button"
+                        data-url="{% url 'core:deadline_update' deadline.pk %}"
+                        data-field="weight"
+                      >
+                        <i class="fa-solid fa-pen"></i>
+                        <span>Adjust</span>
+                      </button>
+                    </div>
+                  </td>
+                  <td><span class="deadline-date">{{ deadline.due_date|date:"M j, Y" }}</span></td>
+                  <td>
+                    <span class="deadline-countdown" aria-live="polite">
+                      <span class="deadline-indicator" aria-hidden="true"></span>
+                      <span class="deadline-countdown__text"></span>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="deadline-module">{% if deadline.module %}{{ deadline.module.name }}{% else %}-{% endif %}</span>
+                    <button
+                      class="btn tertiary small inline-edit-deadline"
+                      type="button"
+                      data-url="{% url 'core:deadline_update' deadline.pk %}"
+                      data-field="module"
+                    >
+                      <i class="fa-solid fa-pen"></i>
+                      <span>Edit</span>
+                    </button>
+                  </td>
+                  <td class="text-right">
+                    <button
+                      class="btn secondary small mark-complete"
+                      type="button"
+                      data-url="{% url 'core:deadline_complete' deadline.pk %}"
+                    >
+                      <i class="fa-solid fa-check"></i>
+                      <span>Mark complete</span>
+                    </button>
+                    <button
+                      class="btn tertiary small deadline-snooze"
+                      type="button"
+                      data-days="2"
+                      data-url="{% url 'core:deadline_reschedule' deadline.pk %}"
+                    >
+                      <i class="fa-solid fa-clock-rotate-left"></i>
+                      <span>Snooze 2d</span>
+                    </button>
+                    <button
+                      class="btn tertiary small deadline-reschedule"
+                      type="button"
+                      data-url="{% url 'core:deadline_reschedule' deadline.pk %}"
+                    >
+                      <i class="fa-solid fa-calendar-plus"></i>
+                      <span>Reschedule</span>
+                    </button>
+                    <button
+                      class="btn primary small deadline-move"
+                      type="button"
+                      data-url="{% url 'core:deadline_move_to_plan' deadline.pk %}"
+                    >
+                      <i class="fa-solid fa-calendar-check"></i>
+                      <span>Move to planner</span>
+                    </button>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" class="muted">No upcoming deadlines right now.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <h2 class="section-title">Shortcuts</h2>
+      <div class="card card-spacer" data-aos="fade-up">
+        <div class="flex-between">
+          <h3><i class="fa-solid fa-terminal"></i> Command Palette</h3>
+          <span class="muted small">Type quick actions like snapshot, export, plan.</span>
+        </div>
+        <div class="command-bar">
+          <i class="fa-solid fa-terminal"></i>
+          <label class="sr-only" for="commandPaletteInput">Command palette</label>
+          <input id="commandPaletteInput"
+                 class="command-input"
+                 type="text"
+                 list="dashboardCommandOptions"
+                 placeholder="Type a command (e.g. snapshot)"
+                 autocomplete="off" />
+          <datalist id="dashboardCommandOptions">
+            {% for cmd in command_palette %}
+              <option value="{{ cmd.id }}" label="{{ cmd.label }}">{{ cmd.label }}</option>
+            {% endfor %}
+          </datalist>
+          <button id="commandPaletteRun" class="btn secondary small" type="button">Run</button>
+        </div>
+      </div>
+    
+  </main>
+
+</div>
+{{ weekly_activity_data|json_script:"weekly-activity-data" }}
+
+{% if milestone_messages %}
+  {{ milestone_messages|json_script:"milestone-messages-data" }}
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const dataNode = document.getElementById('milestone-messages-data');
+      if (!dataNode) return;
+      let messages = [];
+      try {
+        messages = JSON.parse(dataNode.textContent);
+      } catch (error) {
+        console.warn('PredictMyGrade: unable to parse milestone messages', error);
+        return;
+      }
+      if (!Array.isArray(messages) || !messages.length) return;
+
+      const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const launchConfetti = () => {
+        if (prefersReducedMotion) return;
+        const container = document.createElement('div');
+        container.className = 'confetti-container';
+        const colors = ['#7c3aed', '#22c55e', '#f97316', '#facc15', '#38bdf8'];
+        for (let i = 0; i < 80; i += 1) {
+          const piece = document.createElement('span');
+          piece.className = 'confetti-piece';
+          piece.style.left = `${Math.random() * 100}%`;
+          piece.style.animationDelay = `${Math.random() * 2}s`;
+          piece.style.animationDuration = `${2 + Math.random() * 2}s`;
+          piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          container.appendChild(piece);
+        }
+        document.body.appendChild(container);
+        setTimeout(() => container.remove(), 4500);
+      };
+
+      launchConfetti();
+      messages.forEach((message, index) => {
+        setTimeout(() => {
+          if (typeof window.showToast === 'function') {
+            window.showToast(message, 'success');
+          }
+        }, index * 400);
+      });
+    });
+  </script>
+{% endif %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-js-only-form="true"]').forEach((node) => {
+      node.addEventListener('submit', (event) => {
+        event.preventDefault();
+      });
+      node.setAttribute('aria-live', 'polite');
+    });
+  });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const collapseButtons = document.querySelectorAll('[data-collapse-target]');
+      collapseButtons.forEach((button) => {
+        const targetId = button.getAttribute('data-collapse-target');
+        const target = document.getElementById(targetId);
+      const showLabel = button.getAttribute('data-collapse-show-label') || 'Show';
+      const hideLabel = button.getAttribute('data-collapse-hide-label') || 'Hide';
+      const setLabel = (expanded) => {
+        button.textContent = expanded ? hideLabel : showLabel;
+      };
+      setLabel(false);
+      button.addEventListener('click', () => {
+        if (!target) return;
+        const willShow = target.hasAttribute('hidden');
+        target.toggleAttribute('hidden', !willShow);
+        setLabel(willShow);
+      });
+    });
+
+    // Scrollspy for strip links
+    const stripLinks = document.querySelectorAll('.strip-links a');
+    const sections = ['overview','planner','goals','forecast','timeline','ai']
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+
+    if (stripLinks.length && sections.length) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const id = entry.target.id;
+          const link = document.querySelector(`.strip-links a[href="#${id}"]`);
+          if (!link) return;
+          if (entry.isIntersecting) {
+            stripLinks.forEach(a => a.removeAttribute('aria-current'));
+            link.setAttribute('aria-current', 'true');
+          }
+        });
+      }, { rootMargin: '-48% 0px -48% 0px', threshold: 0.1 });
+
+      sections.forEach(section => observer.observe(section));
+    }
+  });
+</script>
+{% endblock %}

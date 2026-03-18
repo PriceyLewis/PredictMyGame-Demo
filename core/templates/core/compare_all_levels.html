@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Compare All Levels{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+      body { background:#0f0b1a; color:#f4f2ff; font-family:Inter, sans-serif; padding:1.25rem; }
+      .page { max-width:1000px; margin:auto; }
+      .card { background:#1b1433; border:1px solid #2a214b; border-radius:16px; padding:1.2rem; margin-bottom:1rem; }
+      .title { font-size:1.6rem; font-weight:800; color:#c4b5fd; margin-bottom:1rem; }
+      .btn { text-decoration:none; background:linear-gradient(90deg,#7c3aed,#a78bfa); color:white; padding:.55rem 1rem; border-radius:.7rem; font-weight:600; }
+    </style>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<div class="page">
+  <div class="title">📊 Compare Academic Levels</div>
+  <a href="{% url 'core:dashboard' %}" class="btn">← Back to Dashboard</a>
+
+  <div class="card">
+    <canvas id="barChart" height="100"></canvas>
+  </div>
+
+  <div class="card">
+    <canvas id="radarChart" height="200"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>🧠 AI Insight Summary</h3>
+    <p>{{ insight|default:"No insight available yet — add more grades." }}</p>
+  </div>
+</div>
+
+<script>
+const labels = {{ labels|safe }};
+const data = {{ values|safe }};
+
+new Chart(document.getElementById("barChart"), {
+  type: "bar",
+  data: {
+    labels: labels,
+    datasets: [{
+      label: "Average %",
+      data: data,
+      backgroundColor: ["#7c3aed","#a78bfa","#c4b5fd"]
+    }]
+  },
+  options: { plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true, ticks:{color:'#cfc8ffcc'}}}}
+});
+
+new Chart(document.getElementById("radarChart"), {
+  type: "radar",
+  data: {
+    labels: labels,
+    datasets: [{
+      label: "Performance Spread",
+      data: data,
+      fill:true,
+      backgroundColor: "rgba(124,58,237,0.15)",
+      borderColor: "#a78bfa",
+      pointBackgroundColor: "#c4b5fd"
+    }]
+  },
+  options: { scales:{r:{beginAtZero:true, ticks:{color:'#cfc8ffcc'}}}}
+});
+</script>
+{% endblock %}

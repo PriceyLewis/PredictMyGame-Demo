@@ -1,0 +1,428 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="application-name" content="PredictMyGrade" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta
+    name="description"
+    content="PredictMyGrade helps you track academic performance and forecast results&mdash;see your future. Shape your future"
+  />
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href="{% static 'img/predictmygrade-favicon.svg' %}"
+  />
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="{% static 'img/predictmygrade-icon-64.png' %}"
+  />
+  <link
+    rel="apple-touch-icon"
+    sizes="192x192"
+    href="{% static 'img/predictmygrade-icon-192.png' %}"
+  />
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="PredictMyGrade" />
+  <meta property="og:title" content="PredictMyGrade" />
+  <meta
+    property="og:description"
+    content="see your future. Shape your future with personalized academic forecasts."
+  />
+  <meta
+    property="og:image"
+    content="{% static 'img/predictmygrade-social.png' %}"
+  />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="PredictMyGrade" />
+  <meta
+    name="twitter:description"
+    content="Track performance, forecast grades, and plan your study path with PredictMyGrade."
+  />
+  <meta
+    name="twitter:image"
+    content="{% static 'img/predictmygrade-social.png' %}"
+  />
+  <title>PredictMyGrade &middot; {% block title %}{% endblock %}</title>
+  <script>
+    (function(){
+      const root = document.documentElement;
+      const saved = localStorage.getItem('predictmygrade-theme');
+      root.classList.remove('theme-dark', 'theme-light');
+      root.classList.add(saved === 'light' ? 'theme-light' : 'theme-dark');
+    })();
+  </script>
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body
+  data-analytics-src="{{ ANALYTICS_SCRIPT_URL }}"
+  data-analytics-layer="{{ ANALYTICS_DATA_LAYER|default:'dataLayer' }}"
+  {% block body_attrs %}{% endblock %}
+>
+  <nav class="site-nav">
+    <div class="site-nav__inner">
+      <a class="site-nav__brand" href="{% url 'core:dashboard' %}">
+        <picture class="site-nav__logo">
+          <source
+            srcset="{% static 'img/predictmygrade-logo.png' %}"
+            type="image/png"
+          />
+          <source
+            srcset="{% static 'img/predictmygrade-logo.jpg' %}"
+            type="image/jpeg"
+          />
+          <img
+            src="{% static 'img/predictmygrade-logo.svg' %}"
+            alt="PredictMyGrade logo"
+          />
+        </picture>
+        <span class="site-nav__brand-text">PredictMyGrade</span>
+      </a>
+      <button
+        class="site-nav__toggle"
+        type="button"
+        id="siteNavToggle"
+        aria-controls="siteNavLinks"
+        aria-expanded="false"
+      >
+        <span aria-hidden="true">&#9776;</span>
+        <span class="sr-only">Toggle navigation</span>
+      </button>
+      <ul class="site-nav__links" id="siteNavLinks">
+        {% if request.user.is_authenticated %}
+          <li><a class="site-nav__link" href="{% url 'core:dashboard' %}">University</a></li>
+          <li><a class="site-nav__link" href="{% url 'core:college' %}">College</a></li>
+          <li><a class="site-nav__link" href="{% url 'core:gcse' %}">GCSE</a></li>
+          <li><a class="site-nav__link" href="{% url 'core:compare_levels' %}">Compare Levels</a></li>
+          <li><a class="site-nav__link" href="{% url 'core:settings' %}">Settings</a></li>
+          {% if request.user.is_superuser %}
+            <li><a class="site-nav__link" href="{% url 'core:admin_hub' %}">Admin Hub</a></li>
+            <li><a class="site-nav__link" href="{% url 'core:admin_analytics' %}">Admin Analytics</a></li>
+            <li><a class="site-nav__link" href="{% url 'core:admin_users' %}">Manage Users</a></li>
+          {% endif %}
+          {% with profile=request.user.profile %}
+          {% if has_premium_access and profile %}
+            <li><a class="site-nav__link" href="{% url 'core:manage_subscription' %}">Manage plan</a></li>
+          {% else %}
+            <li><a class="site-nav__link" href="{% url 'core:upgrade' %}">Upgrade</a></li>
+          {% endif %}
+          {% endwith %}
+        {% else %}
+          <li><a class="site-nav__link" href="{% url 'account_login' %}">Log in</a></li>
+          <li><a class="site-nav__link" href="{% url 'account_signup' %}">Create account</a></li>
+        {% endif %}
+      </ul>
+      <div class="site-nav__actions">
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+          <span class="theme-toggle__icon" data-theme-toggle-icon aria-hidden="true">&#9789;</span>
+          <span class="theme-toggle__label" data-theme-toggle-label>Dark mode</span>
+        </button>
+        {% block nav_plan_chip %}
+          {% if request.user.is_authenticated %}
+            {% with status_class=has_premium_access|yesno:"is-premium,is-free" %}
+              <span class="plan-chip {{ status_class }}" data-plan="{{ plan_type }}">
+                {{ plan_label }}
+                {% if plan_days_remaining %}
+                  <span class="muted small">- {{ plan_days_remaining }}d left</span>
+                {% elif plan_cancel_at_end %}
+                  <span class="muted small">- Cancels at period end</span>
+                {% endif %}
+              </span>
+            {% endwith %}
+          {% endif %}
+        {% endblock %}
+        {% if request.user.is_authenticated %}
+          <a class="btn ghost" href="{% url 'core:ai_assistant' %}">AI Assistant</a>
+          <span class="pill">
+            {{ request.user.get_full_name|default:request.user.username }}
+          </span>
+          <a class="btn secondary" href="{% url 'core:logout' %}">Logout</a>
+        {% else %}
+          <a class="btn secondary" href="{% url 'account_login' %}">Log in</a>
+          <a class="btn" href="{% url 'account_signup' %}">Create account</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div>&copy; {% now "Y" %} PredictMyGrade &middot; see your future. Shape your future.</div>
+    <nav class="site-footer__links" aria-label="Legal links">
+      <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>
+      <a href="{% url 'core:terms_of_service' %}">Terms of Service</a>
+      <a href="{% url 'core:cookie_notice' %}">Cookie Notice</a>
+      <a href="{% url 'core:prediction_disclaimer' %}">Prediction Disclaimer</a>
+      {% if request.user.is_authenticated %}
+      <a href="{% url 'core:download_personal_data' %}">Download My Data</a>
+      <a href="{% url 'core:delete_account' %}">Delete Account</a>
+      {% endif %}
+      <button type="button" data-cookie-open>Cookie preferences</button>
+    </nav>
+    <div class="site-footer__support">
+      Need help? Email <a href="mailto:support@predictmygrade.com">support@predictmygrade.com</a>
+    </div>
+    <p class="site-footer__disclaimer" role="note">
+      Predictions are estimates based on your inputs and not guaranteed.
+    </p>
+  </footer>
+
+  <section class="cookie-banner" data-cookie-banner hidden aria-live="polite">
+    <div class="cookie-banner__text">
+      This site uses cookies for login and analytics purposes.
+      <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>
+    </div>
+    <div class="cookie-banner__actions">
+      <button type="button" class="btn ghost" data-cookie-decline>Only essential</button>
+      <button type="button" class="btn secondary" data-cookie-manage>Manage choices</button>
+      <button type="button" class="btn" data-cookie-accept>Accept all</button>
+    </div>
+  </section>
+
+  <section class="cookie-modal" data-cookie-modal hidden aria-hidden="true" role="dialog" aria-label="Cookie preferences">
+    <div class="cookie-modal__dialog" role="document">
+      <div class="cookie-modal__header">
+        <h2>Cookie preferences</h2>
+        <button type="button" class="btn ghost" data-cookie-close aria-label="Close">&times;</button>
+      </div>
+      <p>Essential cookies keep PredictMyGrade secure and cannot be disabled. You can choose whether to enable anonymous analytics cookies.</p>
+      <div class="cookie-modal__controls">
+        <label class="cookie-toggle">
+          <input type="checkbox" data-cookie-analytics>
+          <span>Allow analytics cookies</span>
+        </label>
+        <p class="muted small">Analytics help us understand which pages need attention. Data is aggregated and never shared for advertising.</p>
+      </div>
+      <div class="cookie-modal__actions">
+        <button type="button" class="btn secondary" data-cookie-save>Save choices</button>
+        <button type="button" class="btn ghost" data-cookie-close>Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <script defer src="{% static 'js/app.js' %}"></script>
+  <script>
+    (function () {
+      const navToggle = document.getElementById('siteNavToggle');
+      const navLinks = document.getElementById('siteNavLinks');
+
+      if (navToggle && navLinks) {
+        navToggle.addEventListener('click', () => {
+          const isOpen = navLinks.classList.toggle('is-open');
+          navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+      }
+
+      const COOKIE_KEY = 'predictmygrade.cookieConsent';
+      const cookieBanner = document.querySelector('[data-cookie-banner]');
+      const cookieModal = document.querySelector('[data-cookie-modal]');
+      const cookieOpeners = document.querySelectorAll('[data-cookie-open]');
+      const cookieManagers = document.querySelectorAll('[data-cookie-manage]');
+      const cookieAccept = document.querySelector('[data-cookie-accept]');
+      const cookieDecline = document.querySelector('[data-cookie-decline]');
+      const cookieSave = document.querySelector('[data-cookie-save]');
+      const cookieClosers = document.querySelectorAll('[data-cookie-close]');
+      const cookieAnalyticsToggle = document.querySelector('[data-cookie-analytics]');
+      const analyticsScriptId = 'pmg-analytics-script';
+      const analyticsSrc = document.body?.dataset.analyticsSrc || '';
+      const analyticsLayer = document.body?.dataset.analyticsLayer || 'dataLayer';
+
+      function readLegacyConsent() {
+        const match = document.cookie.match(/(?:^| )pmg_cookie_consent=([^;]+)/);
+        return match ? match[1] : '';
+      }
+
+      function normaliseConsent(value) {
+        if (!value) return null;
+        const isAnalytics = value === 'analytics';
+        if (!isAnalytics && value !== 'essential') {
+          return null;
+        }
+        return {
+          essential: true,
+          analytics: isAnalytics,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      function loadCookiePrefs() {
+        const raw = localStorage.getItem(COOKIE_KEY);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed.analytics === 'boolean') {
+              return parsed;
+            }
+          } catch (err) {
+            console.warn('Unable to parse stored cookie preferences', err);
+            const legacy = normaliseConsent(raw);
+            if (legacy) return legacy;
+          }
+        }
+        return normaliseConsent(readLegacyConsent());
+      }
+
+      let cookiePrefs = loadCookiePrefs();
+      let lastAnalyticsState = null;
+
+      function refreshCookieUI() {
+        if (cookieBanner) {
+          cookieBanner.hidden = Boolean(cookiePrefs);
+        }
+        if (cookieAnalyticsToggle) {
+          cookieAnalyticsToggle.checked = Boolean(cookiePrefs && cookiePrefs.analytics);
+        }
+      }
+
+      function ensureAnalyticsScript() {
+        if (!analyticsSrc || document.getElementById(analyticsScriptId)) {
+          return;
+        }
+        const script = document.createElement('script');
+        script.id = analyticsScriptId;
+        script.src = analyticsSrc;
+        script.async = true;
+        script.defer = true;
+        script.setAttribute('data-managed-analytics', 'true');
+        document.head.appendChild(script);
+        if (analyticsLayer) {
+          window[analyticsLayer] = window[analyticsLayer] || [];
+        }
+      }
+
+      function removeAnalyticsScript() {
+        const existing = document.getElementById(analyticsScriptId);
+        if (existing) {
+          existing.remove();
+        }
+        if (analyticsLayer && window[analyticsLayer]) {
+          window[analyticsLayer] = [];
+        }
+      }
+
+      function announceAnalyticsState(enabled) {
+        window.dispatchEvent(
+          new CustomEvent('pmg:analytics-toggle', { detail: { enabled } })
+        );
+        if (window.PMGAnalytics) {
+          if (typeof window.PMGAnalytics.toggle === 'function') {
+            window.PMGAnalytics.toggle(enabled);
+          } else if (enabled && typeof window.PMGAnalytics.enable === 'function') {
+            window.PMGAnalytics.enable();
+          } else if (!enabled && typeof window.PMGAnalytics.disable === 'function') {
+            window.PMGAnalytics.disable();
+          }
+        }
+      }
+
+      function applyAnalyticsState() {
+        const hasDecision = Boolean(cookiePrefs);
+        const enabled = Boolean(cookiePrefs && cookiePrefs.analytics);
+        document.documentElement.dataset.analyticsConsent = hasDecision
+          ? (enabled ? 'granted' : 'denied')
+          : 'pending';
+        if (enabled) {
+          ensureAnalyticsScript();
+        } else {
+          removeAnalyticsScript();
+        }
+        if (hasDecision && lastAnalyticsState !== enabled) {
+          announceAnalyticsState(enabled);
+          lastAnalyticsState = enabled;
+        }
+      }
+
+      function persistCookiePrefs(prefs) {
+        cookiePrefs = {
+          essential: true,
+          analytics: Boolean(prefs.analytics),
+          updatedAt: new Date().toISOString(),
+        };
+        try {
+          localStorage.setItem(COOKIE_KEY, JSON.stringify(cookiePrefs));
+        } catch (err) {
+          console.warn('Unable to persist cookie preferences', err);
+        }
+        const cookieValue = cookiePrefs.analytics ? 'analytics' : 'essential';
+        document.cookie = `pmg_cookie_consent=${cookieValue};path=/;max-age=31536000;SameSite=Lax`;
+        refreshCookieUI();
+        syncConsentBridge();
+        applyAnalyticsState();
+      }
+
+      function syncConsentBridge() {
+        const value = cookiePrefs ? (cookiePrefs.analytics ? 'analytics' : 'essential') : null;
+        window.PMGConsent = window.PMGConsent || {};
+        window.PMGConsent.value = value;
+        window.PMGConsent.acceptAnalytics = () => persistCookiePrefs({ analytics: true });
+        window.PMGConsent.declineAnalytics = () => persistCookiePrefs({ analytics: false });
+      }
+
+      function openCookieModal(suspendBanner = false) {
+        if (!cookieModal) return;
+        if (suspendBanner && cookieBanner) {
+          cookieBanner.hidden = true;
+        }
+        refreshCookieUI();
+        cookieModal.hidden = false;
+        cookieModal.setAttribute('aria-hidden', 'false');
+        if (cookieAnalyticsToggle) {
+          cookieAnalyticsToggle.focus();
+        }
+      }
+
+      function closeCookieModal() {
+        if (!cookieModal) return;
+        cookieModal.hidden = true;
+        cookieModal.setAttribute('aria-hidden', 'true');
+        if (!cookiePrefs && cookieBanner) {
+          cookieBanner.hidden = false;
+        }
+      }
+
+      refreshCookieUI();
+      syncConsentBridge();
+      applyAnalyticsState();
+
+      cookieOpeners.forEach((btn) => btn.addEventListener('click', () => openCookieModal()));
+      cookieManagers.forEach((btn) => btn.addEventListener('click', () => openCookieModal(true)));
+      cookieClosers.forEach((btn) => btn.addEventListener('click', closeCookieModal));
+
+      if (cookieAccept) {
+        cookieAccept.addEventListener('click', () => {
+          persistCookiePrefs({ analytics: true });
+          closeCookieModal();
+        });
+      }
+
+      if (cookieDecline) {
+        cookieDecline.addEventListener('click', () => {
+          persistCookiePrefs({ analytics: false });
+          closeCookieModal();
+        });
+      }
+
+      if (cookieSave) {
+        cookieSave.addEventListener('click', () => {
+          const analyticsOptIn = cookieAnalyticsToggle ? cookieAnalyticsToggle.checked : false;
+          persistCookiePrefs({ analytics: analyticsOptIn });
+          closeCookieModal();
+        });
+      }
+    })();
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

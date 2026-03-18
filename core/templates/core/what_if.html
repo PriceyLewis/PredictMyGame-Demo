@@ -1,0 +1,5014 @@
+{% extends "base.html" %}
+
+
+
+
+
+
+
+{% load static %}
+
+
+
+
+
+
+
+{% block title %}What-If Simulation{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% block content %}
+
+
+
+
+
+
+
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+
+
+
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style>
+
+
+
+
+
+
+
+  .scenario-table {
+
+
+
+
+
+
+
+    width: 100%;
+
+
+
+
+
+
+
+    border-collapse: collapse;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .scenario-table th,
+
+
+
+
+
+
+
+  .scenario-table td {
+
+
+
+
+
+
+
+    padding: 0.6rem 0.8rem;
+
+
+
+
+
+
+
+    text-align: left;
+
+
+
+
+
+
+
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .scenario-table tbody tr.best-scenario {
+
+
+
+
+
+
+
+    background: rgba(124, 58, 237, 0.12);
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .scenario-table tbody tr.best-scenario td {
+
+
+
+
+
+
+
+    font-weight: 600;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .plan-summary-headline {
+
+
+
+
+
+
+
+    font-weight: 600;
+
+
+
+
+
+
+
+    font-size: 1.05rem;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .plan-timeline {
+
+
+
+
+
+
+
+    list-style: decimal;
+
+
+
+
+
+
+
+    padding-left: 1.2rem;
+
+
+
+
+
+
+
+    margin: 0;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .plan-timeline li {
+
+
+
+
+
+
+
+    margin-bottom: 0.4rem;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .simRow {
+
+
+
+
+
+
+
+    display: grid;
+
+
+
+
+
+
+
+    gap: 0.6rem;
+
+
+
+
+
+
+
+    margin-bottom: 0.8rem;
+
+
+
+
+
+
+
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+
+
+
+
+
+
+
+    align-items: end;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  .simRow .remove-sim {
+
+
+
+
+
+
+
+    justify-self: start;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="page">
+
+
+
+
+
+
+
+  <div class="header-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;">
+
+
+
+
+
+
+
+    <div class="title">What-If Simulation</div>
+
+
+
+
+
+
+
+    <a href="{% url 'core:dashboard' %}" class="btn-secondary">Back</a>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="card" style="margin-top:1rem;">
+
+
+
+
+
+
+
+    <h3>Goal Tuning</h3>
+
+
+
+
+
+
+
+    <div class="slider-grid" style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+
+
+
+
+
+
+
+      <label style="display:flex;flex-direction:column;gap:.4rem;">
+
+
+
+
+
+
+
+        Target Average <span id="targetValue" style="font-weight:600;">70%</span>
+
+
+
+
+
+
+
+        <input type="range" id="targetSlider" min="40" max="90" step="1" value="70">
+
+
+
+
+
+
+
+      </label>
+
+
+
+
+
+
+
+      <label style="display:flex;flex-direction:column;gap:.4rem;">
+
+
+
+
+
+
+
+        Extra Study Hours / Week <span id="hoursValue" style="font-weight:600;">4h</span>
+
+
+
+
+
+
+
+        <input type="range" id="hoursSlider" min="0" max="20" step="1" value="4">
+
+
+
+
+
+
+
+      </label>
+
+
+
+
+
+
+
+    </div>
+
+
+
+
+
+
+
+    <p
+
+
+
+
+
+
+
+      id="studyMeta"
+
+
+
+
+
+
+
+      class="muted"
+
+
+
+
+
+
+
+      data-hour-gain="{{ hour_gain|default:0.65|floatformat:2 }}"
+
+
+
+
+
+
+
+      style="margin-top:.6rem;"
+
+
+
+
+
+
+
+    >
+
+
+
+
+
+
+
+      Each extra study hour is assumed to add approximately {{ hour_gain|default:0.65|floatformat:2 }} percentage
+
+
+
+
+
+
+
+      points to your projected average.
+
+
+
+
+
+
+
+    </p>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}">
+    <div class="premium-feature__content card" style="margin-top:1rem;">
+      <h3>Run Simulations</h3>
+
+
+
+
+
+
+
+    <form id="simForm" class="ml-form">
+
+
+
+
+
+
+
+      {% csrf_token %}
+
+
+
+
+
+
+
+      <div id="simRows">
+
+
+
+
+
+
+
+        <div class="simRow" data-removable="false">
+
+
+
+
+
+
+
+          <label>Scenario Name <input type="text" name="sim_name" placeholder="Scenario 1"></label>
+
+
+
+
+
+
+
+          <label>Expected Mark (%) <input type="number" name="sim_mark" step="0.1" required></label>
+
+
+
+
+
+
+
+          <label>Credits <input type="number" name="sim_credits" step="1" required></label>
+
+
+
+
+
+
+
+          <button type="button" class="btn secondary remove-sim" style="display:none;">Remove</button>
+
+
+
+
+
+
+
+        </div>
+
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+      <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.6rem;">
+
+
+
+
+
+
+
+        <button type="button" id="addRow" class="btn secondary">Add Scenario</button>
+
+
+
+
+
+
+
+        <button type="submit" class="btn">Run Simulation</button>
+
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+      <div class="slider-grid" style="margin-top:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+
+
+
+
+
+
+
+        <label style="display:flex;flex-direction:column;gap:.4rem;">
+
+
+
+
+
+
+
+          Study Start Date
+
+
+
+
+
+
+
+          <input type="date" id="studyStart">
+
+
+
+
+
+
+
+        </label>
+
+
+
+
+
+
+
+        <label style="display:flex;flex-direction:column;gap:.4rem;">
+
+
+
+
+
+
+
+          Plan Horizon (weeks)
+
+
+
+
+
+
+
+          <select id="planWeeks">
+
+
+
+
+
+
+
+            <option value="1">1 week</option>`n            <option value="2">2 weeks</option>
+
+
+
+
+
+
+
+            <option value="3">3 weeks</option>
+
+
+
+
+
+
+
+            <option value="4" selected>4 weeks</option>
+
+
+
+
+
+
+
+            <option value="5">5 weeks</option>
+
+
+
+
+
+
+
+            <option value="6">6 weeks</option>
+
+
+
+
+
+
+
+            <option value="8">8 weeks</option>
+
+
+
+
+
+
+
+            <option value="10">10 weeks</option>
+
+
+
+
+
+
+
+            <option value="12">12 weeks</option>
+
+
+
+
+
+
+
+          </select>
+
+
+
+
+
+
+
+        </label>
+
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+    </form>
+
+
+
+
+
+
+
+    <div id="simResult" class="muted" style="margin-top:.8rem;">Tune your goal and run the simulation.</div>
+    </div>
+    {% if not has_premium_access %}
+    <div class="premium-feature__overlay">
+      <div class="premium-feature__icon"><i class="fa-solid fa-atom"></i></div>
+      <strong>What-If simulations are premium-only.</strong>
+      <p class="premium-feature__description">
+        Upgrade to unlock unlimited scenario runs, saved history, and rich exports.
+      </p>
+      <a href="{% url 'core:upgrade' %}" class="btn premium-feature__cta">Upgrade for simulations</a>
+    </div>
+    {% endif %}
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="card" id="chartCard" style="margin-top:1rem;display:none;">
+
+
+
+
+
+
+
+    <h3>Predicted Averages</h3>
+
+
+
+
+
+
+
+    <canvas id="whatIfChart" height="120"></canvas>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div class="card" id="planSummaryCard" style="margin-top:1rem;display:none;">
+
+
+
+
+
+
+
+    <h3>Suggested Action Plan</h3>
+
+
+
+
+
+
+
+    <p id="planHeadline" class="plan-summary-headline"></p>
+
+
+
+
+
+
+
+    <p id="planDetail" class="muted" style="margin-bottom:1rem;"></p>
+
+
+
+
+
+
+
+    <div id="planExports" style="display:none;gap:.6rem;flex-wrap:wrap;">
+
+
+
+
+
+
+
+      <button type="button" id="exportPlanJson" class="btn secondary">Download plan (JSON)</button>
+
+
+
+
+
+
+
+      <button type="button" id="exportPlanIcs" class="btn secondary">Add to calendar (.ics)</button>
+
+
+
+
+
+
+
+    </div>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div class="card" id="scenarioTableCard" style="margin-top:1rem;display:none;">
+
+
+
+
+
+
+
+    <h3>Scenario Comparison</h3>
+
+
+
+
+
+
+
+    <div class="table-responsive">
+
+
+
+
+
+
+
+      <table class="scenario-table">
+
+
+
+
+
+
+
+        <thead>
+
+
+
+
+
+
+
+          <tr>
+
+
+
+
+
+
+
+            <th>Scenario</th>
+
+
+
+
+
+
+
+            <th>Projected %</th>
+
+
+
+
+
+
+
+            <th>With extra hours</th>
+
+
+
+
+
+
+
+            <th>Gain vs current</th>
+
+
+
+
+
+
+
+            <th>Hours to target</th>
+
+
+
+
+
+
+
+          </tr>
+
+
+
+
+
+
+
+        </thead>
+
+
+
+
+
+
+
+        <tbody id="scenarioTableBody"></tbody>
+
+
+
+
+
+
+
+      </table>
+
+
+
+
+
+
+
+    </div>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div class="card" id="recommendationsCard" style="margin-top:1rem;display:none;">
+
+
+
+
+
+
+
+    <h3>Recommendations</h3>
+
+
+
+
+
+
+
+    <ul id="recommendations" class="list" style="margin:0;"></ul>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+  <div class="card" id="planTimelineCard" style="margin-top:1rem;display:none;">
+
+
+
+
+
+
+
+    <h3>Action Timeline</h3>
+
+
+
+
+
+
+
+    <ol id="planTimeline" class="plan-timeline"></ol>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="card" style="margin-top:1rem;">
+
+
+
+
+
+
+
+    <h3>Your Current Modules</h3>
+
+
+
+
+
+
+
+    {% if modules %}
+
+
+
+
+
+
+
+      <ul class="list">
+
+
+
+
+
+
+
+        {% for m in modules %}
+
+
+
+
+
+
+
+          <li>{{ m.name }} - {{ m.grade_percent|default:"N/A" }}% ({{ m.credits }} credits)</li>
+
+
+
+
+
+
+
+        {% endfor %}
+
+
+
+
+
+
+
+      </ul>
+
+
+
+
+
+
+
+      <div style="margin-top:.6rem;display:flex;flex-direction:column;gap:.4rem;align-items:flex-start;">
+
+
+
+
+
+
+
+        {% if has_more_modules %}
+
+
+
+
+
+
+
+          <p class="muted" style="margin:0;">Showing the latest {{ module_limit }} modules.</p>
+
+
+
+
+
+
+
+        {% endif %}
+
+
+
+
+
+
+
+        <a href="{% url 'core:modules_list' %}" class="btn secondary">View all modules</a>
+
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+    {% else %}
+
+
+
+
+
+
+
+      <p class="muted">No modules yet. Add some first.</p>
+
+
+
+
+
+
+
+    {% endif %}
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+
+
+
+
+
+
+(function () {
+
+
+
+
+
+
+
+  const addRowBtn = document.getElementById("addRow");
+
+
+
+
+
+
+
+  const simRows = document.getElementById("simRows");
+
+
+
+
+
+
+
+  const simForm = document.getElementById("simForm");
+
+
+
+
+
+
+
+  const simResult = document.getElementById("simResult");
+
+
+
+
+
+
+
+  const chartCard = document.getElementById("chartCard");
+
+
+
+
+
+
+
+  const recommendationsCard = document.getElementById("recommendationsCard");
+
+
+
+
+
+
+
+  const recommendationsList = document.getElementById("recommendations");
+
+
+
+
+
+
+
+  const targetSlider = document.getElementById("targetSlider");
+
+
+
+
+
+
+
+  const targetValue = document.getElementById("targetValue");
+
+
+
+
+
+
+
+  const hoursSlider = document.getElementById("hoursSlider");
+
+
+
+
+
+
+
+  const hoursValue = document.getElementById("hoursValue");
+
+
+
+
+
+
+
+  const studyMeta = document.getElementById("studyMeta");
+
+
+
+
+
+
+
+  const baseHourGain = parseFloat(studyMeta?.dataset.hourGain || "0.65");
+
+
+
+
+
+
+
+  const planSummaryCard = document.getElementById("planSummaryCard");
+
+
+
+
+
+
+
+  const planHeadline = document.getElementById("planHeadline");
+
+
+
+
+
+
+
+  const planDetail = document.getElementById("planDetail");
+
+
+
+
+
+
+
+  const scenarioTableCard = document.getElementById("scenarioTableCard");
+
+
+
+
+
+
+
+  const scenarioTableBody = document.getElementById("scenarioTableBody");
+
+
+
+
+
+
+
+  const planTimelineCard = document.getElementById("planTimelineCard");
+
+
+
+
+
+
+
+  const planTimeline = document.getElementById("planTimeline");
+
+
+
+
+
+
+
+  const planExports = document.getElementById("planExports");
+
+
+
+
+
+
+
+  const exportPlanJsonBtn = document.getElementById("exportPlanJson");
+
+
+
+
+
+
+
+  const exportPlanIcsBtn = document.getElementById("exportPlanIcs");
+
+
+
+
+
+
+
+  const studyStartInput = document.getElementById("studyStart");
+
+
+
+
+
+
+
+  const planWeeksSelect = document.getElementById("planWeeks");
+
+
+
+
+
+
+
+  let latestPlanData = null;
+
+
+
+
+
+
+
+  let chart = null;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function updateExportControls(hasPlan, hasTimeline) {
+
+
+
+
+
+
+
+    if (!planExports) {
+
+
+
+
+
+
+
+      return;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    planExports.style.display = hasPlan ? "flex" : "none";
+
+
+
+
+
+
+
+    if (exportPlanJsonBtn) {
+
+
+
+
+
+
+
+      exportPlanJsonBtn.disabled = !hasPlan;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    if (exportPlanIcsBtn) {
+
+
+
+
+
+
+
+      exportPlanIcsBtn.disabled = !hasTimeline;
+
+
+
+
+
+
+
+      exportPlanIcsBtn.style.display = hasTimeline ? "" : "none";
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function updateSliderLabels() {
+
+
+
+
+
+
+
+    targetValue.textContent = `${targetSlider.value}%`;
+
+
+
+
+
+
+
+    hoursValue.textContent = `${hoursSlider.value}h`;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function updateScenarioControls() {
+
+
+
+
+
+
+
+    const rows = [...simRows.querySelectorAll(".simRow")];
+
+
+
+
+
+
+
+    rows.forEach((row, idx) => {
+
+
+
+
+
+
+
+      const nameInput = row.querySelector('[name="sim_name"]');
+
+
+
+
+
+
+
+      if (nameInput && !nameInput.value) {
+
+
+
+
+
+
+
+        nameInput.placeholder = `Scenario ${idx + 1}`;
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+      const removeButton = row.querySelector(".remove-sim");
+
+
+
+
+
+
+
+      if (removeButton) {
+
+
+
+
+
+
+
+        removeButton.style.display = rows.length > 1 ? "inline-flex" : "none";
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+    });
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function createScenarioRow() {
+
+
+
+
+
+
+
+    const row = document.createElement("div");
+
+
+
+
+
+
+
+    row.className = "simRow";
+
+
+
+
+
+
+
+    row.innerHTML = `
+
+
+
+
+
+
+
+      <label>Scenario Name <input type="text" name="sim_name"></label>
+
+
+
+
+
+
+
+      <label>Expected Mark (%) <input type="number" name="sim_mark" step="0.1" required></label>
+
+
+
+
+
+
+
+      <label>Credits <input type="number" name="sim_credits" step="1" required></label>
+
+
+
+
+
+
+
+      <button type="button" class="btn secondary remove-sim">Remove</button>
+
+
+
+
+
+
+
+    `;
+
+
+
+
+
+
+
+    return row;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  updateSliderLabels();
+
+
+
+
+
+
+
+  targetSlider.addEventListener("input", updateSliderLabels);
+
+
+
+
+
+
+
+  hoursSlider.addEventListener("input", updateSliderLabels);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  addRowBtn.addEventListener("click", () => {
+
+
+
+
+
+
+
+    const row = createScenarioRow();
+
+
+
+
+
+
+
+    simRows.appendChild(row);
+
+
+
+
+
+
+
+    updateScenarioControls();
+
+
+
+
+
+
+
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  simRows.addEventListener("click", (event) => {
+
+
+
+
+
+
+
+    const trigger = event.target.closest(".remove-sim");
+
+
+
+
+
+
+
+    if (!trigger) {
+
+
+
+
+
+
+
+      return;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    const rows = simRows.querySelectorAll(".simRow");
+
+
+
+
+
+
+
+    if (rows.length <= 1) {
+
+
+
+
+
+
+
+      showToast("At least one scenario is required.", "linear-gradient(90deg,#ef4444,#7c3aed)");
+
+
+
+
+
+
+
+      return;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    trigger.closest(".simRow").remove();
+
+
+
+
+
+
+
+    updateScenarioControls();
+
+
+
+
+
+
+
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function showToast(message, background = "linear-gradient(90deg,#7c3aed,#a78bfa)") {
+
+
+
+
+
+
+
+    Toastify({ text: message, duration: 2600, gravity: "top", position: "right", style: { background } }).showToast();
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  simForm.addEventListener("submit", async (event) => {
+
+
+
+
+
+
+
+    event.preventDefault();
+
+
+
+
+
+
+
+    latestPlanData = null;
+
+
+
+
+
+
+
+    updateExportControls(false, false);
+
+
+
+
+
+
+
+    const rows = [...document.querySelectorAll(".simRow")];
+
+
+
+
+
+
+
+    const sims = rows.map((row) => ({
+
+
+
+
+
+
+
+      name: (row.querySelector("[name=sim_name]")?.value || "").trim(),
+
+
+
+
+
+
+
+      mark: parseFloat(row.querySelector("[name=sim_mark]").value || 0),
+
+
+
+
+
+
+
+      credits: parseFloat(row.querySelector("[name=sim_credits]").value || 0),
+
+
+
+
+
+
+
+    }));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    if (sims.some((scenario) => Number.isNaN(scenario.mark) || Number.isNaN(scenario.credits))) {
+
+
+
+
+
+
+
+      showToast("Please complete every scenario before running the simulation.", "linear-gradient(90deg,#ef4444,#7c3aed)");
+
+
+
+
+
+
+
+      return;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    const targetAvg = parseFloat(targetSlider.value || "0");
+
+
+
+
+
+
+
+    const studyHours = parseFloat(hoursSlider.value || "0");
+
+
+
+
+
+
+
+    const studyStartDate = studyStartInput?.value || null;
+
+
+
+
+
+
+
+    const planWeeks = parseInt(planWeeksSelect?.value || "4", 10) || 4;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    try {
+
+
+
+
+
+
+
+      const response = await fetch("{% url 'core:predict_what_if' %}", {
+
+
+
+
+
+
+
+        method: "POST",
+
+
+
+
+
+
+
+        headers: {
+
+
+
+
+
+
+
+          "Content-Type": "application/json",
+
+
+
+
+
+
+
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value,
+
+
+
+
+
+
+
+        },
+
+
+
+
+
+
+
+        body: JSON.stringify({
+
+
+
+
+
+
+
+          sims,
+
+
+
+
+
+
+
+          target_avg: targetAvg,
+
+
+
+
+
+
+
+          study_hours: studyHours,
+
+
+
+
+
+
+
+          study_start_date: studyStartDate || undefined,
+
+
+
+
+
+
+
+          plan_weeks: planWeeks,
+
+
+
+
+
+
+
+        }),
+
+
+
+
+
+
+
+      });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      const payload = await response.json();
+
+
+
+
+
+
+
+      if (payload.error) {
+
+
+
+
+
+
+
+        throw new Error(payload.error);
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      const points = payload.predicted_points || [];
+
+
+
+
+
+
+
+      const classes = payload.classifications || [];
+
+
+
+
+
+
+
+      const adjusted = payload.adjusted_points || [];
+
+
+
+
+
+
+
+      const adjustedClasses = payload.adjusted_classifications || [];
+
+
+
+
+
+
+
+      const targetLine = typeof payload.target_average === "number" ? payload.target_average : targetAvg;
+
+
+
+
+
+
+
+      const scenarioSummaries = payload.scenario_summaries || [];
+
+
+
+
+
+
+
+      const bestScenario = payload.best_scenario || null;
+
+
+
+
+
+
+
+      const planSummary = payload.plan_summary || {};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      if (!points.length) {
+
+
+
+
+
+
+
+        updateExportControls(false, false);
+
+
+
+
+
+
+
+        showToast("No data returned", "linear-gradient(90deg,#ef4444,#7c3aed)");
+
+
+
+
+
+
+
+        return;
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      chartCard.style.display = "block";
+
+
+
+
+
+
+
+      const ctx = document.getElementById("whatIfChart");
+
+
+
+
+
+
+
+      if (chart) {
+
+
+
+
+
+
+
+        chart.destroy();
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      const labels =
+
+
+
+
+
+
+
+        scenarioSummaries.length === points.length
+
+
+
+
+
+
+
+          ? scenarioSummaries.map((item) => item.name || `Scenario ${item.index}`)
+
+
+
+
+
+
+
+          : points.map((_, index) => `Scenario ${index + 1}`);
+
+
+
+
+
+
+
+      const barColors = points.map((value) => (value >= 70 ? "#22c55e" : value >= 60 ? "#7c3aed" : value >= 50 ? "#f59e0b" : "#ef4444"));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      chart = new Chart(ctx, {
+
+
+
+
+
+
+
+        type: "bar",
+
+
+
+
+
+
+
+        data: {
+
+
+
+
+
+
+
+          labels,
+
+
+
+
+
+
+
+          datasets: [
+
+
+
+
+
+
+
+            {
+
+
+
+
+
+
+
+              label: "Projected average (%)",
+
+
+
+
+
+
+
+              data: points,
+
+
+
+
+
+
+
+              backgroundColor: barColors,
+
+
+
+
+
+
+
+              borderRadius: 4,
+
+
+
+
+
+
+
+            },
+
+
+
+
+
+
+
+            {
+
+
+
+
+
+
+
+              label: `With +${studyHours.toFixed(0)}h/week`,
+
+
+
+
+
+
+
+              data: adjusted,
+
+
+
+
+
+
+
+              backgroundColor: "rgba(59,130,246,0.35)",
+
+
+
+
+
+
+
+              borderColor: "#3b82f6",
+
+
+
+
+
+
+
+              borderWidth: 1,
+
+
+
+
+
+
+
+              borderRadius: 4,
+
+
+
+
+
+
+
+            },
+
+
+
+
+
+
+
+            {
+
+
+
+
+
+
+
+              type: "line",
+
+
+
+
+
+
+
+              label: `Target ${targetLine.toFixed(1)}%`,
+
+
+
+
+
+
+
+              data: labels.map(() => targetLine),
+
+
+
+
+
+
+
+              borderColor: "#f97316",
+
+
+
+
+
+
+
+              borderWidth: 2,
+
+
+
+
+
+
+
+              pointRadius: 0,
+
+
+
+
+
+
+
+              fill: false,
+
+
+
+
+
+
+
+              tension: 0.3,
+
+
+
+
+
+
+
+            },
+
+
+
+
+
+
+
+          ],
+
+
+
+
+
+
+
+        },
+
+
+
+
+
+
+
+        options: {
+
+
+
+
+
+
+
+          responsive: true,
+
+
+
+
+
+
+
+          interaction: { intersect: false, mode: "index" },
+
+
+
+
+
+
+
+          plugins: {
+
+
+
+
+
+
+
+            legend: { position: "top" },
+
+
+
+
+
+
+
+            tooltip: {
+
+
+
+
+
+
+
+              callbacks: {
+
+
+
+
+
+
+
+                afterBody: (items) => {
+
+
+
+
+
+
+
+                  const index = items[0].dataIndex;
+
+
+
+
+
+
+
+                  const baseClass = classes[index] || "Unknown";
+
+
+
+
+
+
+
+                  const adjustedClass = adjustedClasses[index] || baseClass;
+
+
+
+
+
+
+
+                  return [`Classification: ${baseClass}`, `With hours: ${adjustedClass}`];
+
+
+
+
+
+
+
+                },
+
+
+
+
+
+
+
+              },
+
+
+
+
+
+
+
+            },
+
+
+
+
+
+
+
+          },
+
+
+
+
+
+
+
+          scales: {
+
+
+
+
+
+
+
+            y: { beginAtZero: true, max: 100 },
+
+
+
+
+
+
+
+          },
+
+
+
+
+
+
+
+        },
+
+
+
+
+
+
+
+      });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      if (planSummary && planSummary.headline) {
+
+
+
+
+
+
+
+        simResult.textContent = planSummary.headline;
+
+
+
+
+
+
+
+      } else {
+
+
+
+
+
+
+
+        simResult.textContent = `Simulation complete: ${points.length} scenario${points.length > 1 ? "s" : ""} vs target ${targetLine.toFixed(1)}%.`;
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+      simResult.classList.remove("muted");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      if (studyMeta) {
+
+
+
+
+
+
+
+        const gain = typeof payload.hours_gain_per_week === "number" ? payload.hours_gain_per_week : studyHours * baseHourGain;
+
+
+
+
+
+
+
+        studyMeta.textContent = `Estimated weekly boost: +${gain.toFixed(1)} percentage points across scenarios.`;
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      const recs = payload.recommendations || [];
+
+
+
+
+
+
+
+      if (recommendationsList) {
+
+
+
+
+
+
+
+        recommendationsList.innerHTML = "";
+
+
+
+
+
+
+
+        if (scenarioSummaries.length) {
+
+
+
+
+
+
+
+          scenarioSummaries.forEach((summary, idx) => {
+
+
+
+
+
+
+
+            const item = document.createElement("li");
+
+
+
+
+
+
+
+            item.innerHTML = `<strong>${summary.name}:</strong> ${summary.recommendation}`;
+
+
+
+
+
+
+
+            if (bestScenario && summary.index === bestScenario.index) {
+
+
+
+
+
+
+
+              item.style.color = "#7c3aed";
+
+
+
+
+
+
+
+            }
+
+
+
+
+
+
+
+            recommendationsList.appendChild(item);
+
+
+
+
+
+
+
+          });
+
+
+
+
+
+
+
+        } else {
+
+
+
+
+
+
+
+          recs.forEach((message) => {
+
+
+
+
+
+
+
+            const item = document.createElement("li");
+
+
+
+
+
+
+
+            item.textContent = message;
+
+
+
+
+
+
+
+            recommendationsList.appendChild(item);
+
+
+
+
+
+
+
+          });
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+        recommendationsCard.style.display =
+
+
+
+
+
+
+
+          (scenarioSummaries.length && recommendationsList.children.length) || recs.length ? "block" : "none";
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      scenarioTableBody.innerHTML = "";
+
+
+
+
+
+
+
+      if (scenarioSummaries.length) {
+
+
+
+
+
+
+
+        scenarioSummaries.forEach((summary) => {
+
+
+
+
+
+
+
+          const row = document.createElement("tr");
+
+
+
+
+
+
+
+          if (bestScenario && summary.index === bestScenario.index) {
+
+
+
+
+
+
+
+            row.classList.add("best-scenario");
+
+
+
+
+
+
+
+          }
+
+
+
+
+
+
+
+          const projectedValue = Number(summary.projected || 0);
+
+
+
+
+
+
+
+          const adjustedValue = Number(summary.adjusted || 0);
+
+
+
+
+
+
+
+          const gainValue = Number(summary.adjusted_improvement || 0);
+
+
+
+
+
+
+
+          const hoursNeeded = Number(summary.hours_needed || 0);
+
+
+
+
+
+
+
+          row.innerHTML = `
+
+
+
+
+
+
+
+            <td>${summary.name}</td>
+
+
+
+
+
+
+
+            <td>${projectedValue.toFixed(1)}%</td>
+
+
+
+
+
+
+
+            <td>${adjustedValue.toFixed(1)}%</td>
+
+
+
+
+
+
+
+            <td>${gainValue.toFixed(1)}%</td>
+
+
+
+
+
+
+
+            <td>${hoursNeeded}</td>
+
+
+
+
+
+
+
+          `;
+
+
+
+
+
+
+
+          scenarioTableBody.appendChild(row);
+
+
+
+
+
+
+
+        });
+
+
+
+
+
+
+
+        scenarioTableCard.style.display = "block";
+
+
+
+
+
+
+
+      } else {
+
+
+
+
+
+
+
+        scenarioTableCard.style.display = "none";
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      if (planSummary && planSummary.headline) {
+
+
+
+
+
+
+
+        planSummaryCard.style.display = "block";
+
+
+
+
+
+
+
+        planHeadline.textContent = planSummary.headline;
+
+
+
+
+
+
+
+        planDetail.textContent = planSummary.detail || "Use the comparison table to decide your next actions.";
+
+
+
+
+
+
+
+      } else {
+
+
+
+
+
+
+
+        planSummaryCard.style.display = "none";
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      planTimeline.innerHTML = "";
+
+
+
+
+
+
+
+      const timelineEntries = Array.isArray(planSummary.timeline) ? planSummary.timeline : [];
+
+
+
+
+
+
+
+      const hasTimelineEntries = timelineEntries.length > 0;
+
+
+
+
+
+
+
+      const fallbackSteps = [];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      if (hasTimelineEntries) {
+
+
+
+
+
+
+
+        timelineEntries.forEach((entry, idx) => {
+
+
+
+
+
+
+
+          const item = document.createElement("li");
+
+
+
+
+
+
+
+          const target = Number(entry.target || 0).toFixed(1);
+
+
+
+
+
+
+
+          const hoursText = entry.hours ? ` | ${entry.hours}h focus` : "";
+
+
+
+
+
+
+
+          const focusText = entry.focus ? ` | Focus: ${entry.focus}` : "";
+
+
+
+
+
+
+
+          const label = entry.date ? `${entry.date}` : `Week ${entry.week || idx + 1}`;
+
+
+
+
+
+
+
+          item.textContent = `${label} -> target ${target}%${hoursText}${focusText}`;
+
+
+
+
+
+
+
+          planTimeline.appendChild(item);
+
+
+
+
+
+
+
+        });
+
+
+
+
+
+
+
+        planTimelineCard.style.display = "block";
+
+
+
+
+
+
+
+      } else {
+
+
+
+
+
+
+
+        if (studyHours > 0) {
+
+
+
+
+
+
+
+          fallbackSteps.push(`Allocate ${studyHours.toFixed(0)} extra hour(s) each week for focused study.`);
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+        if (bestScenario) {
+
+
+
+
+
+
+
+          const bestAdjusted = Number(bestScenario.adjusted || 0);
+
+
+
+
+
+
+
+          fallbackSteps.push(`Aim for ${bestAdjusted.toFixed(1)}% by following ${bestScenario.name}.`);
+
+
+
+
+
+
+
+          if (bestScenario.hours_needed) {
+
+
+
+
+
+
+
+            fallbackSteps.push(`Add approximately ${bestScenario.hours_needed} hour(s) per week to hit ${targetLine.toFixed(1)}%.`);
+
+
+
+
+
+
+
+          }
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+        if (planSummary && planSummary.detail) {
+
+
+
+
+
+
+
+          planSummary.detail
+
+
+
+
+
+
+
+            .split(".")
+
+
+
+
+
+
+
+            .map((part) => part.trim())
+
+
+
+
+
+
+
+            .filter(Boolean)
+
+
+
+
+
+
+
+            .forEach((part) => fallbackSteps.push(part));
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+        fallbackSteps.forEach((step) => {
+
+
+
+
+
+
+
+          const item = document.createElement("li");
+
+
+
+
+
+
+
+          item.textContent = step;
+
+
+
+
+
+
+
+          planTimeline.appendChild(item);
+
+
+
+
+
+
+
+        });
+
+
+
+
+
+
+
+        planTimelineCard.style.display = fallbackSteps.length ? "block" : "none";
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      const planAvailable = Boolean((planSummary && planSummary.headline) || scenarioSummaries.length || fallbackSteps.length);
+
+
+
+
+
+
+
+      latestPlanData = {
+
+
+
+
+
+
+
+        generatedAt: new Date().toISOString(),
+
+
+
+
+
+
+
+        currentAverage: payload.current,
+
+
+
+
+
+
+
+        targetAverage: payload.target_average,
+
+
+
+
+
+
+
+        studyHours: payload.study_hours,
+
+
+
+
+
+
+
+        studyStartDate,
+
+
+
+
+
+
+
+        planWeeks,
+
+
+
+
+
+
+
+        bestScenario,
+
+
+
+
+
+
+
+        scenarios: scenarioSummaries,
+
+
+
+
+
+
+
+        planSummary,
+
+
+
+
+
+
+
+        timeline: timelineEntries,
+
+
+
+
+
+
+
+        timelineFallback: fallbackSteps,
+
+
+
+
+
+
+
+        recommendations: payload.recommendations,
+
+
+
+
+
+
+
+      };
+
+
+
+
+
+
+
+      updateExportControls(planAvailable, hasTimelineEntries);
+
+
+
+
+
+
+
+      showToast("Simulation complete");
+
+
+
+
+
+
+
+    } catch (error) {
+
+
+
+
+
+
+
+      updateExportControls(false, false);
+
+
+
+
+
+
+
+      showToast(`Error: ${error.message}`, "linear-gradient(90deg,#ef4444,#7c3aed)");
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+  });
+
+
+
+
+
+
+
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function downloadBlob(content, mimeType, filename) {
+
+
+
+
+
+
+
+    const blob = new Blob([content], { type: mimeType });
+
+
+
+
+
+
+
+    const url = URL.createObjectURL(blob);
+
+
+
+
+
+
+
+    const anchor = document.createElement("a");
+
+
+
+
+
+
+
+    anchor.href = url;
+
+
+
+
+
+
+
+    anchor.download = filename;
+
+
+
+
+
+
+
+    anchor.click();
+
+
+
+
+
+
+
+    URL.revokeObjectURL(url);
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function toIcsDateUTC(dateStr, offsetDays = 0) {
+
+
+
+
+
+
+
+    if (!dateStr) {
+
+
+
+
+
+
+
+      return null;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    const parts = dateStr.split("-");
+
+
+
+
+
+
+
+    if (parts.length !== 3) {
+
+
+
+
+
+
+
+      return null;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    const year = parseInt(parts[0], 10);
+
+
+
+
+
+
+
+    const month = parseInt(parts[1], 10);
+
+
+
+
+
+
+
+    const day = parseInt(parts[2], 10);
+
+
+
+
+
+
+
+    if ([year, month, day].some((value) => Number.isNaN(value))) {
+
+
+
+
+
+
+
+      return null;
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    const date = new Date(Date.UTC(year, month - 1, day + offsetDays));
+
+
+
+
+
+
+
+    return `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, "0")}${String(date.getUTCDate()).padStart(2, "0")}`;
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  function escapeIcsText(value) {
+
+    return String(value || "")
+
+      .replace(/\\/g, "\\\\")
+
+      .replace(/;/g, "\\;")
+
+      .replace(/,/g, "\\,")
+
+      .replace(/\r?\n/g, "\\n");
+
+  }
+
+
+
+  function buildIcsPayload(planData) {
+
+    const entries = Array.isArray(planData.timeline) ? planData.timeline : [];
+
+    if (!entries.length) {
+
+      return "";
+
+    }
+
+    const dtstamp = new Date()
+
+      .toISOString()
+
+      .replace(/[-:]/g, "")
+
+      .replace(/\.\d+Z$/, "Z");
+
+    const lines = [
+
+      "BEGIN:VCALENDAR",
+
+      "VERSION:2.0",
+
+      "PRODID:-//PredictMyGrade//What-If Planner//EN",
+
+      "CALSCALE:GREGORIAN",
+
+      "METHOD:PUBLISH",
+
+    ];
+
+    let eventCount = 0;
+
+    entries.forEach((entry, idx) => {
+
+      const start = toIcsDateUTC(entry.date);
+
+      if (!start) {
+
+        return;
+
+      }
+
+      const end = toIcsDateUTC(entry.date, 1);
+
+      const week = entry.week || idx + 1;
+
+      const target = Number(entry.target || 0).toFixed(1);
+
+      const summary = `Week ${week} target ${target}%`;
+
+      const details = [];
+
+      if (entry.focus) {
+
+        details.push(`Focus: ${entry.focus}`);
+
+      }
+
+      if (entry.hours) {
+
+        details.push(`Planned study hours: ${entry.hours}`);
+
+      }
+
+      if (planData.bestScenario?.name) {
+
+        details.push(`Scenario: ${planData.bestScenario.name}`);
+
+      }
+
+      if (planData.targetAverage) {
+
+        details.push(`Target average: ${Number(planData.targetAverage).toFixed(1)}%`);
+
+      }
+
+      lines.push("BEGIN:VEVENT");
+
+      lines.push(`UID:what-if-${week}-${start}@predictmygrade.local`);
+
+      lines.push(`DTSTAMP:${dtstamp}`);
+
+      lines.push(`DTSTART;VALUE=DATE:${start}`);
+
+      if (end) {
+
+        lines.push(`DTEND;VALUE=DATE:${end}`);
+
+      }
+
+      lines.push(`SUMMARY:${escapeIcsText(summary)}`);
+
+      if (details.length) {
+
+        lines.push(`DESCRIPTION:${escapeIcsText(details.join("\\n"))}`);
+
+      }
+
+      lines.push("END:VEVENT");
+
+      eventCount += 1;
+
+    });
+
+    if (!eventCount) {
+
+      return "";
+
+    }
+
+    lines.push("END:VCALENDAR");
+
+    return `${lines.join("\\r\\n")}` + "\\r\\n";
+
+  }
+
+
+
+  if (planExports) {
+
+
+
+
+
+
+
+    updateExportControls(false, false);
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  if (exportPlanJsonBtn) {
+
+
+
+
+
+
+
+    exportPlanJsonBtn.addEventListener("click", () => {
+
+
+
+
+
+
+
+      if (!latestPlanData) {
+
+
+
+
+
+
+
+        showToast("Run the simulation to generate a plan.", "linear-gradient(90deg,#ef4444,#7c3aed)");
+
+
+
+
+
+
+
+        return;
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+
+
+
+
+
+
+      const jsonPayload = JSON.stringify(latestPlanData, null, 2);
+
+
+
+
+
+
+
+      downloadBlob(jsonPayload, "application/json", `what-if-plan-${timestamp}.json`);
+
+
+
+
+
+
+
+      showToast("Plan JSON downloaded.");
+
+
+
+
+
+
+
+    });
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  if (exportPlanIcsBtn) {
+
+
+
+
+
+
+
+    exportPlanIcsBtn.addEventListener("click", () => {
+
+
+
+
+
+
+
+      if (!latestPlanData || !Array.isArray(latestPlanData.timeline) || !latestPlanData.timeline.length) {
+
+
+
+
+
+
+
+        showToast("Generate a plan with a timeline before exporting to calendar.", "linear-gradient(90deg,#ef4444,#7c3aed)");
+
+
+
+
+
+
+
+        return;
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+      const icsPayload = buildIcsPayload(latestPlanData);
+
+
+
+
+
+
+
+      if (!icsPayload) {
+
+
+
+
+
+
+
+        showToast("Unable to build calendar export for this plan.", "linear-gradient(90deg,#ef4444,#7c3aed)");
+
+
+
+
+
+
+
+        return;
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+
+
+
+
+
+
+      downloadBlob(icsPayload, "text/calendar", `what-if-plan-${timestamp}.ics`);
+
+
+
+
+
+
+
+      showToast("Calendar file generated.");
+
+
+
+
+
+
+
+    });
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  updateScenarioControls();
+
+
+
+
+
+
+
+})();
+
+
+
+
+
+
+
+</script>
+
+
+
+
+
+
+
+{% endblock %}
+
+
+
+
+
+
+

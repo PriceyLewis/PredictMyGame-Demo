@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Welcome to PredictMyGrade – Tour{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+<style>
+  body {
+    background: linear-gradient(135deg, #4A00E0, #8E2DE2);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .tour-container {
+    background: #fff;
+    color: #333;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    padding: 3rem;
+    width: 700px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tour-step {
+    display: none;
+    animation: fadeIn 0.5s ease;
+  }
+
+  .tour-step.active {
+    display: block;
+  }
+
+  .tour-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .tour-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .tour-desc {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    color: #555;
+  }
+
+  .tour-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+  }
+
+  .tour-btn {
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .tour-btn.primary {
+    background: #6C63FF;
+    color: #fff;
+  }
+
+  .tour-btn.secondary {
+    background: #eee;
+    color: #333;
+  }
+
+  .progress-dots {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ccc;
+    transition: background 0.3s;
+  }
+
+  .dot.active {
+    background: #6C63FF;
+  }
+
+  .skip-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 0.9rem;
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+  }
+
+  .skip-btn:hover {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="tour-container">
+  <!-- Skip button -->
+  <button class="skip-btn" onclick="window.location.href='{% url 'skip_tour' %}'">Skip tour ✕</button>
+
+  <!-- Step 1 -->
+  <div class="tour-step active" id="step-1">
+    <div class="tour-icon">📊</div>
+    <div class="tour-title">Track Your Progress Easily</div>
+    <div class="tour-desc">Add your subjects or modules and instantly see your weighted averages, grades, and progress towards your goals.</div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="tour-step" id="step-2">
+    <div class="tour-icon">🤖</div>
+    <div class="tour-title">AI-Powered Predictions</div>
+    <div class="tour-desc">Let our machine learning engine predict future grades based on your past performance and study trends.</div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="tour-step" id="step-3">
+    <div class="tour-icon">🎯</div>
+    <div class="tour-title">Smart Study Suggestions</div>
+    <div class="tour-desc">Receive personalised tips and improvement strategies to help you reach your next target classification.</div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="tour-step" id="step-4">
+    <div class="tour-icon">🧑‍🎓</div>
+    <div class="tour-title">All Levels Supported</div>
+    <div class="tour-desc">Whether you're at GCSE, A-Level, BTEC, or University — PredictMyGrade adapts to track and predict your progress at every stage.</div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="tour-step" id="step-5">
+    <div class="tour-icon">📈</div>
+    <div class="tour-title">Analytics & Snapshots</div>
+    <div class="tour-desc">View your progress over time with snapshots, insights, and analytics dashboards built just for students.</div>
+    <button class="tour-btn primary" onclick="window.location.href='{% url 'complete_tour' %}'">🚀 Start Using PredictMyGrade</button>
+  </div>
+
+  <div class="tour-nav">
+    <button class="tour-btn secondary" id="prevBtn" onclick="prevStep()" disabled>← Back</button>
+    <button class="tour-btn primary" id="nextBtn" onclick="nextStep()">Next →</button>
+  </div>
+
+  <div class="progress-dots">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+</div>
+
+<script>
+  let currentStep = 1;
+  const totalSteps = 5;
+
+  function updateSteps() {
+    document.querySelectorAll(".tour-step").forEach((step, index) => {
+      step.classList.toggle("active", index + 1 === currentStep);
+    });
+
+    document.querySelectorAll(".dot").forEach((dot, index) => {
+      dot.classList.toggle("active", index + 1 === currentStep);
+    });
+
+    document.getElementById("prevBtn").disabled = currentStep === 1;
+    const nextBtn = document.getElementById("nextBtn");
+    nextBtn.textContent = currentStep === totalSteps ? "Finish" : "Next →";
+
+    if (currentStep === totalSteps) {
+      nextBtn.onclick = () => window.location.href = "{% url 'complete_tour' %}";
+    } else {
+      nextBtn.onclick = nextStep;
+    }
+  }
+
+  function nextStep() {
+    if (currentStep < totalSteps) {
+      currentStep++;
+      updateSteps();
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 1) {
+      currentStep--;
+      updateSteps();
+    }
+  }
+</script>
+{% endblock %}

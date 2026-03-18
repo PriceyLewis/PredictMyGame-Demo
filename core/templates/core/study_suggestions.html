@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Study Suggestions{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+<div class="page">
+  <div class="header-row">
+    <div class="title">💡 Study Suggestions</div>
+    <div class="quick-actions">
+      <a class="btn-secondary" href="{% url 'core:dashboard' %}">⬅ Back</a>
+    </div>
+  </div>
+
+  <div class="card center">
+    <h3>Your personalised study tips</h3>
+    <ul id="tipsList" class="list" style="margin-top:1rem;"></ul>
+    <button id="refreshBtn" class="btn" style="margin-top:1rem;">🔄 Refresh Tips</button>
+  </div>
+</div>
+
+<script>
+async function loadTips(){
+  const res = await fetch("{% url 'core:study_suggestions' %}");
+  const data = await res.json();
+  const list = document.getElementById("tipsList");
+  list.innerHTML = data.tips.map(t => `<li style="text-align:left;">${t}</li>`).join("");
+}
+document.getElementById("refreshBtn").addEventListener("click", loadTips);
+loadTips();
+</script>
+{% endblock %}

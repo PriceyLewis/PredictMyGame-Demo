@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}GCSE Dashboard{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/levels.css' %}">
+
+<style>
+  .gcse-dashboard .level-hero {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(15, 23, 42, 0.95));
+    border-radius: 20px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.2rem;
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.6);
+  }
+  .gcse-dashboard .level-hero h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+  }
+  .gcse-dashboard .hero-copy .eyebrow {
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.4rem;
+  }
+  .gcse-dashboard .hero-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .countdown-card,
+  .hero-progress-card {
+    background: rgba(15, 15, 30, 0.75);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 1rem;
+    position: relative;
+  }
+  .countdown-card .deadline-pill {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .hero-progress-card span {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .hero-progress-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0.4rem 0;
+  }
+  .hero-progress-track {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+  .hero-progress-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(135deg, #38bdf8, #a78bfa);
+    border-radius: 999px;
+    transition: width 0.8s ease;
+  }
+  .hero-actions {
+    margin-bottom: 1.5rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    align-items: center;
+  }
+  .insight-banner {
+    margin-bottom: 1.2rem;
+    padding: 1rem 1.2rem;
+    border-radius: 14px;
+    background: rgba(37, 99, 235, 0.12);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+  }
+  .insight-banner strong {
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+  @media (max-width: 640px) {
+    .gcse-dashboard .level-hero {
+      grid-template-columns: 1fr;
+    }
+    .hero-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+  .gcse-dashboard .heatmap-summary-card {
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  }
+  .gcse-dashboard .heatmap-summary-card .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .gcse-dashboard .heatmap-summary-card .summary-item {
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .gcse-dashboard .heatmap-summary-card .summary-item strong {
+    display: block;
+    font-size: 1.2rem;
+    margin-bottom: 0.35rem;
+  }
+  .gcse-dashboard .heatmap-summary-card .summary-item div {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+</style>
+
+<div class="level-dashboard gcse-dashboard">
+  <div class="level-hero gcse-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">GCSE checkpoint</p>
+      <h1>GCSE Progress Checkpoint</h1>
+      <p class="muted">Track subject readiness, revision coverage, and exam-day preparation.</p>
+      <p class="hero-trend muted">
+        {% if trend_delta > 0 %}
+          Trending up <strong>+{{ trend_delta }} pts</strong> over recent snapshots.
+        {% elif trend_delta < 0 %}
+          Slight dip of <strong>{{ trend_delta_abs|floatformat:1 }} pts</strong> — reboot a focused review.
+        {% else %}
+          Holding steady — keep logging practice results to keep the trajectory steady.
+        {% endif %}
+      </p>
+    </div>
+    <div class="hero-aside">
+      <div class="countdown-card">
+        {% if next_exam %}
+          <div class="muted">Next exam</div>
+          <strong>{{ next_exam.title }}</strong>
+          {% if next_exam.days < 0 %}
+            <span class="deadline-pill overdue">overdue</span>
+          {% elif next_exam.days == 0 %}
+            <span class="deadline-pill soon">today</span>
+          {% else %}
+            <span class="deadline-pill soon">{{ next_exam.days }} day{% if next_exam.days != 1 %}s{% endif %}</span>
+          {% endif %}
+        {% else %}
+          <div class="muted">Next exam</div>
+          <strong>No date logged</strong>
+          <span class="deadline-pill">log a mock date</span>
+        {% endif %}
+      </div>
+      <div class="hero-progress-card">
+        <span>Revision coverage</span>
+        <div class="hero-progress-value">{{ completion_rate|default:"0" }}%</div>
+        <div class="hero-progress-track">
+          <span class="hero-progress-fill" style="width: {{ completion_rate|default:0 }}%;"></span>
+        </div>
+        <p class="muted" style="margin-top:0.4rem;">{{ module_count|default:0 }} subjects logged — keep inputs fresh for accurate cues.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-actions">
+    <div class="toolbar-meta">
+      <strong>{{ module_count|default:0 }}</strong> subjects logged &bull; Coverage {{ completion_rate|default:0 }}% &bull; Average {{ average|default:"0.0" }}%
+      <div>Keep adding mock scores so the dashboard can surface smarter GCSE insights.</div>
+    </div>
+    <div class="level-actions">
+      <a href="{% url 'core:module_add' %}?level=gcse" class="level-btn">Log subject result</a>
+      <a href="#revision-block" class="level-btn secondary">Add revision slot</a>
+      <a href="{% url 'core:compare_levels' %}" class="level-btn outline">Compare levels</a>
+    </div>
+  </div>
+
+  {% with revision_tips.0 as top_tip %}
+    {% if top_tip %}
+      <div class="insight-banner">
+        <strong>Revision cue</strong>
+        <p>{{ top_tip }}</p>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="grid grid-4 hero-metrics">
+    <div class="card">
+      <h3>Average grade</h3>
+      <div class="big-number">{{ average|default:"0.0" }}%</div>
+      <p class="muted">
+        {% if trend_delta > 0 %}
+          Trending up by {{ trend_delta }} pts across recent snapshots.
+        {% elif trend_delta < 0 %}
+          Down {{ trend_delta_abs|floatformat:1 }} pts vs last snapshot &mdash; schedule a recap.
+        {% else %}
+          Holding steady &mdash; keep logging practice results.
+        {% endif %}
+      </p>
+    </div>
+    <div class="card">
+      <h3>Subjects tracked</h3>
+      <div class="big-number">{{ module_count }}</div>
+      <p class="muted">Aim for {{ completion_rate }}% coverage of your exam list.</p>
+    </div>
+    <div class="card">
+      <h3>Revision completion</h3>
+      <div class="big-number">{{ completion_rate }}%</div>
+      <p class="muted">Log remaining subjects to reach full coverage.</p>
+    </div>
+    <div class="card">
+      <h3>Confidence index</h3>
+      <div class="big-number">{{ confidence_score }}%</div>
+      <p class="muted">Based on grade momentum and subject coverage.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:1.5rem;">
+    <div class="card">
+      <h3>Progress timeline</h3>
+      <p class="card-subtitle">Track how your average shifts across recent logs.</p>
+      <div class="chart-wrap">
+        <canvas id="gcseProgressChart" height="230"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Grade distribution</h3>
+      <p class="card-subtitle">See how many subjects land in each grade band.</p>
+      <div class="chart-wrap">
+        <canvas id="gcseDistributionChart" height="230"></canvas>
+      </div>
+    </div>
+  </div>
+
+<div class="section-title">Subject mastery heatmap</div>
+<div class="card">
+  <p class="card-subtitle">Confidence is inferred from the most recent grade per subject.</p>
+  {% if heatmap_rows %}
+    <table class="heatmap">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Grade %</th>
+          <th>Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in heatmap_rows %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>{{ row.grade }}</td>
+          <td class="conf-{{ row.confidence|lower }}">{{ row.confidence }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+    <div class="empty-state">Log subject grades to generate your mastery heatmap.</div>
+    {% endif %}
+  </div>
+
+  <div class="card heatmap-summary-card">
+    <h3>Heatmap insight</h3>
+    {% if heatmap_strongest and heatmap_focus %}
+      <div class="summary-grid">
+        <div class="summary-item">
+          <p class="muted">Top performer</p>
+          <strong>{{ heatmap_strongest.name }}</strong>
+          <div>{{ heatmap_strongest.grade }}%</div>
+          <small class="muted">Confidence {{ heatmap_strongest.confidence }}</small>
+        </div>
+        <div class="summary-item">
+          <p class="muted">Focus subject</p>
+          <strong>{{ heatmap_focus.name }}</strong>
+          <div>{{ heatmap_focus.grade }}%</div>
+          <small class="muted">Confidence {{ heatmap_focus.confidence }}</small>
+        </div>
+      </div>
+    {% else %}
+      <p class="muted">Add grades to the heatmap to highlight where to lean in next.</p>
+    {% endif %}
+  </div>
+
+  <div class="section-title">Revision timetable</div>
+  <div class="grid grid-2" id="revision-block">
+    <div class="card">
+      <h3>Create revision slot</h3>
+      <p class="card-subtitle">Add focused sessions to your weekly timetable.</p>
+      <form method="post" action="{% url 'core:add_revision_session' %}" class="inline-form">
+        {% csrf_token %}
+        <div class="form-field">
+          <label class="sr-only" for="revisionSubject">Subject</label>
+          <select id="revisionSubject" name="subject" required>
+            <option value="">Select subject</option>
+            {% if heatmap_rows %}
+              {% for row in heatmap_rows %}
+              <option value="{{ row.name }}">{{ row.name }}</option>
+              {% endfor %}
+            {% else %}
+              <option value="Maths">Maths</option>
+              <option value="English Language">English Language</option>
+              <option value="English Literature">English Literature</option>
+              <option value="Combined Science">Combined Science</option>
+              <option value="Biology">Biology</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Physics">Physics</option>
+              <option value="Geography">Geography</option>
+              <option value="History">History</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="sr-only" for="revisionDate">Date</label>
+          <input id="revisionDate" type="date" name="date" required>
+        </div>
+        <div class="form-field">
+          <label class="sr-only" for="revisionTime">Time</label>
+          <input id="revisionTime" type="time" name="time">
+        </div>
+        <button type="submit" class="export-btn">Add session</button>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Upcoming revision slots</h3>
+      <p class="card-subtitle">Sessions are saved to your account so you can iterate quickly.</p>
+      {% if revision_schedule %}
+      <ul class="list">
+        {% for session in revision_schedule %}
+        <li>
+          <span>{{ session.subject }} &bull; {{ session.display }} {{ session.time }}</span>
+          <form method="post" action="{% url 'core:delete_revision_session' session.id %}" onsubmit="return confirm('Remove this session?');">
+            {% csrf_token %}
+            <button type="submit" class="export-btn">Delete</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">No sessions planned yet. Add your first one on the left.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="section-title">Past paper tracker</div>
+  <div class="card">
+    <p class="card-subtitle">Log scores and statuses so you can see progress at a glance.</p>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Paper</th>
+          <th>Score %</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for paper in past_papers %}
+        <tr>
+          <td>{{ paper.name }}</td>
+          <td>{{ paper.score|default:"-" }}</td>
+          <td>
+            <form method="post" action="{% url 'core:update_past_paper' paper.id %}" style="display:flex; gap:0.4rem; align-items:center;">
+              {% csrf_token %}
+              <select name="status" onchange="this.form.submit()">
+                {% for value,label in past_paper_status_choices %}
+                <option value="{{ value }}" {% if paper.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <input type="number" name="score" value="{{ paper.score }}" placeholder="Score" step="0.1" min="0" max="100">
+              <button type="submit" class="export-btn">Save</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" action="{% url 'core:delete_past_paper' paper.id %}" onsubmit="return confirm('Remove this record?');">
+              {% csrf_token %}
+              <button type="submit" class="export-btn">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="muted">Log completed papers and scores to build your tracker.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form method="post" action="{% url 'core:add_past_paper' %}" class="inline-form" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      <div class="form-field">
+        <label class="sr-only" for="paperName">Paper</label>
+        <input id="paperName" type="text" name="name" placeholder="Paper e.g. AQA Maths Paper 1" required>
+      </div>
+      <div class="form-field">
+        <label class="sr-only" for="paperScore">Score</label>
+        <input id="paperScore" type="number" name="score" step="0.1" min="0" max="100" placeholder="Score">
+      </div>
+      <div class="form-field">
+        <label class="sr-only" for="paperStatus">Status</label>
+        <select id="paperStatus" name="status">
+          {% for value,label in past_paper_status_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="export-btn">Add paper</button>
+    </form>
+  </div>
+
+  <div class="section-title">Revision cues & grade boundaries</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Revision cues</h3>
+      <p class="card-subtitle">AI-powered reminders drawn from your recent study gaps.</p>
+      <div class="tips">
+        {% for tip in revision_tips %}
+        <div class="tip-item">{{ tip }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Grade boundary reference</h3>
+      <p class="card-subtitle">Snapshot of the boundaries you have logged.</p>
+      <table class="table">
+        <thead>
+          <tr><th>Subject</th><th>Grade</th><th>Boundary</th></tr>
+        </thead>
+        <tbody>
+          {% for boundary in grade_boundaries %}
+          <tr>
+            <td>{{ boundary.subject }} ({{ boundary.exam_board }})</td>
+            <td>{{ boundary.grade }}</td>
+            <td>{{ boundary.boundary }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<div class="section-title">Exam-day checklist</div>
+<div class="card">
+  <p class="card-subtitle">Stay organised &mdash; your selections are saved to your account.</p>
+    <div class="checklist">
+      {% for item in exam_checklist %}
+      <form method="post" action="{% url 'core:toggle_exam_checklist' %}">
+        {% csrf_token %}
+        <input type="hidden" name="key" value="{{ item.key }}">
+        <input type="hidden" name="completed" value="{{ item.completed|yesno:'true,false' }}">
+        <label>
+          <input type="checkbox" {% if item.completed %}checked{% endif %} onchange="this.form.completed.value=this.checked?'true':'false'; this.form.submit();">
+          {{ item.label }}
+        </label>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section-title">AI suggestion feed & reflection</div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>AI suggestions</h3>
+      <p class="card-subtitle">Quick nudges generated from your latest data.</p>
+      <div class="ai-feed">
+        {% for suggestion in ai_suggestions %}
+        <div>{{ suggestion }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Weekly reflection</h3>
+      <p class="card-subtitle">Capture thoughts about progress and focus areas. Stored locally.</p>
+      <div class="reflection">
+        <textarea id="gcseReflection" placeholder="What went well? What will you focus on next?"></textarea>
+        <button type="button" id="gcseReflectionSave">Save reflection</button>
+      </div>
+      <ul class="muted" style="margin-top:0.8rem;">
+        {% for prompt in reflection_prompts %}
+        <li>{{ prompt }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+<div class="section-title">Parent / guardian summary</div>
+<div class="card">
+  <p class="card-subtitle">Export a concise summary of progress and upcoming checkpoints.</p>
+    <button type="button" class="export-btn" id="gcseParentExport">Export printable summary</button>
+    <div class="muted" id="gcseExportStatus" style="margin-top:0.6rem;"></div>
+  </div>
+
+<div class="section-title">AI exam projection</div>
+<div class="premium-feature {% if not has_premium_access %}premium-feature--locked{% endif %}">
+  <div class="premium-feature__content card">
+    {% if not has_premium_access %}
+    <p class="card-subtitle">Premium unlocks unlimited AI projections. Free tier users have daily limits.</p>
+    {% endif %}
+      <form method="post" data-ml-form>
+        {% csrf_token %}
+        <label style="display:flex; flex-direction:column; gap:0.35rem; font-weight:600; font-size:0.9rem;">
+          Current average (%)
+          <input type="number" step="0.1" data-avg-input value="{{ average|default:0 }}">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:0.35rem; font-weight:600; font-size:0.9rem; margin-top:0.6rem;">
+          Subjects logged
+          <input type="number" step="1" data-credits-input value="{{ module_count|default:0 }}">
+        </label>
+        <button type="submit" class="export-btn" style="margin-top:0.8rem;" {% if not has_premium_access %}disabled{% endif %}>Predict outcome</button>
+      </form>
+      <div class="muted" data-ml-result>Log your latest results and run the projection.</div>
+  </div>
+  {% if not has_premium_access %}
+  <div class="premium-feature__overlay">
+    <div class="premium-feature__icon"><i class="fa-solid fa-sigma"></i></div>
+    <strong>AI exam projections are premium-only.</strong>
+    <p class="premium-feature__description">
+      Upgrade to generate unlimited forecasts, compare subjects, and download your results.
+    </p>
+    <a href="{% url 'core:upgrade' %}" class="btn premium-feature__cta">Upgrade for exam predictor</a>
+  </div>
+  {% endif %}
+</div>
+</div>
+
+{{ parent_summary|json_script:"gcse-parent-summary" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function() {
+  const progressLabels = {{ progress_labels_json|safe }};
+  const progressValues = {{ progress_values_json|safe }};
+  const distributionLabels = {{ distribution_labels_json|safe }};
+  const distributionValues = {{ distribution_data_json|safe }};
+
+  const progressCtx = document.getElementById("gcseProgressChart");
+  if (progressCtx) {
+    new Chart(progressCtx, {
+      type: "line",
+      data: {
+        labels: progressLabels,
+        datasets: [{
+          label: "Average %",
+          data: progressValues,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,0.18)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: "#1d4ed8"
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { stepSize: 10 } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  const distributionCtx = document.getElementById("gcseDistributionChart");
+  if (distributionCtx) {
+    new Chart(distributionCtx, {
+      type: "doughnut",
+      data: {
+        labels: distributionLabels,
+        datasets: [{
+          data: distributionValues,
+          backgroundColor: ["#1d4ed8", "#3b82f6", "#60a5fa", "#bfdbfe"],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        plugins: { legend: { position: "bottom" } },
+        cutout: "60%"
+      }
+    });
+  }
+
+  const reflectionBox = document.getElementById("gcseReflection");
+  const reflectionBtn = document.getElementById("gcseReflectionSave");
+  if (reflectionBox && reflectionBtn) {
+    const key = "predictmygrade:gcse:reflection";
+    reflectionBox.value = localStorage.getItem(key) || "";
+    reflectionBtn.addEventListener("click", () => {
+      localStorage.setItem(key, reflectionBox.value);
+      reflectionBtn.textContent = "Reflection saved!";
+      setTimeout(() => { reflectionBtn.textContent = "Save reflection"; }, 2000);
+    });
+  }
+
+  const parentBtn = document.getElementById("gcseParentExport");
+  const parentStatus = document.getElementById("gcseExportStatus");
+  if (parentBtn) {
+    const summary = JSON.parse(document.getElementById("gcse-parent-summary").textContent);
+    parentBtn.addEventListener("click", () => {
+      const lines = [
+        "PredictMyGrade GCSE Summary",
+        "=======================",
+        `Average: ${summary.average ?? "n/a"}%`,
+        `Confidence index: ${summary.confidence ?? 0}%`,
+        summary.next_exam ? `Next exam: ${summary.next_exam.title} (${summary.next_exam.due})` : "Next exam: not logged",
+        "",
+        "Upcoming deadlines:"
+      ];
+      (summary.upcoming_deadlines || []).forEach((item) => {
+        lines.push(`- ${item.title} (${item.due})`);
+      });
+      lines.push("", "Revision sessions:");
+      (summary.revision_sessions || []).forEach((item) => {
+        lines.push(`- ${item.subject} (${item.date})`);
+      });
+      const blob = new Blob([lines.join("\\n")], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "predictmygrade-gcse-summary.txt";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      if (parentStatus) parentStatus.textContent = "Summary exported as text file.";
+    });
+  }
+})();
+</script>
+{% endblock %}

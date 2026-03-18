@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Backup History{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <style>
+      body { background:#0f0b1a; color:#f4f2ff; font-family:Inter,sans-serif; }
+      .page { max-width:1000px; margin:0 auto; padding:2rem; }
+      .header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:1.5rem; }
+      .btn { background:linear-gradient(135deg,#7c3aed,#a78bfa); color:#fff; padding:.55rem 1rem; border:none; border-radius:8px; cursor:pointer; text-decoration:none; font-weight:600; transition:.25s; }
+      .btn.secondary { background:#2a214b; border:1px solid #3b2c68; }
+      .btn:hover { filter:brightness(1.1); box-shadow:0 0 12px rgba(124,58,237,.4); transform:translateY(-1px); }
+      table { width:100%; border-collapse:collapse; margin-top:1rem; background:linear-gradient(180deg,#1b1433,#201a3f); border:1px solid #2a214b; border-radius:10px; overflow:hidden; }
+      th, td { padding:.75rem 1rem; text-align:left; border-bottom:1px solid #2a214b; }
+      th { color:#c4b5fd; background:#1b1433; }
+      tr:hover { background:rgba(124,58,237,0.08); transition:.25s; }
+      .muted { color:#cfc8ffcc; }
+      .empty { text-align:center; padding:2rem; color:#aaa; }
+    </style>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+{% endblock %}
+{% block content %}
+<div class="page" data-aos="fade-up">
+    <div class="header">
+      <h2>Backup History <span class="badge subtle">{{ backups_count|default:0 }} total</span></h2>
+      <a href="{% url 'core:dashboard' %}" class="btn secondary">Back to Dashboard</a>
+    </div>
+
+    {% if backups %}
+      <table>
+        <thead>
+          <tr>
+            <th>Backup File</th>
+            <th>Size</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in backups %}
+          <tr>
+            <td>{{ b.name }}</td>
+            <td>{{ b.size_label }}</td>
+            <td>
+              <div>{{ b.created_display }}</div>
+              <div class="muted small">Created {{ b.age_label }}</div>
+            </td>
+            <td>
+              <a href="{{ b.url }}" class="btn secondary small">Download</a>
+              <form method="post" action="{% url 'core:restore_backup' %}" enctype="multipart/form-data" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="backup_json" value="{{ b.payload|escape }}">
+                <button type="submit" class="btn small">Restore</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty">
+        <p>No backups found yet.</p>
+        <p class="muted">Your backups will appear here automatically after each restore or manual backup.</p>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

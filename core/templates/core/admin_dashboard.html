@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin Analytics Hub{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/levels.css' %}">
+{% endblock %}
+{% block content %}
+<div class="level-dashboard">
+  <div class="level-header">
+    <div>
+      <h1>Admin analytics hub</h1>
+      <p class="muted">Monitor platform health, usage trends, and premium adoption.</p>
+    </div>
+    <div class="badge-ring">
+      <span>Total users</span>
+      <strong>{{ total_users }}</strong>
+    </div>
+  </div>
+
+  <div class="level-toolbar">
+    <div class="toolbar-meta">
+      Active last 7 days: {{ active_7 }} &bull; Active last 30 days: {{ active_30 }}
+    </div>
+    <div class="level-actions">
+      <a class="level-btn" href="{% url 'core:admin_users' %}">Manage users</a>
+      <a class="level-btn secondary" href="{% url 'core:system_health' %}">System health</a>
+      <a class="level-btn outline" href="{% url 'core:dashboard' %}">Back to dashboard</a>
+    </div>
+  </div>
+
+  {% if request.user.is_superuser %}
+  <div class="card">
+    <h3>Quick admin controls</h3>
+    <p class="card-subtitle">Toggle premium access for any user ID.</p>
+    <form id="togglePremiumForm" class="inline-form" data-toggle-url="{% url 'core:admin_toggle_premium' 0 %}">
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="userId">User ID</label>
+        <input id="userId" type="number" min="1" placeholder="Enter user ID" required>
+      </div>
+      <button type="submit" class="btn secondary">Toggle premium</button>
+    </form>
+    <p class="muted" id="toggleResult" role="status" style="margin-top:0.8rem;"></p>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-3">
+    <div class="card">
+      <h3>Total users</h3>
+      <div class="big-number">{{ total_users }}</div>
+    </div>
+    <div class="card">
+      <h3>Active (7 / 30 days)</h3>
+      <div class="big-number">{{ active_7 }} / {{ active_30 }}</div>
+    </div>
+    <div class="card">
+      <h3>Snapshots recorded</h3>
+      <div class="big-number">{{ total_snaps }}</div>
+      <p class="muted">Average per user: {{ avg_snaps_per_user }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <h3>Snapshots by week (12w)</h3>
+      <canvas id="snapsWeek" height="200" aria-label="Snapshots by week chart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Snapshots by day (30d)</h3>
+      <canvas id="snapsDay" height="200" aria-label="Snapshots by day chart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Login providers</h3>
+      <canvas id="providers" height="200" aria-label="Login providers chart"></canvas>
+      {% if not provider_labels %}<p class="muted" style="margin-top:0.6rem;">No social login data yet.</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Top users by snapshots</h3>
+    <canvas id="topUsers" height="220" aria-label="Top users chart"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>Overall module average</h3>
+    <div class="big-number">{{ overall_module_avg }}%</div>
+    <p class="muted">General health of grades across the platform.</p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  (function () {
+    const form = document.getElementById('togglePremiumForm');
+    if (!form) return;
+    const result = document.getElementById('toggleResult');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = document.getElementById('userId').value;
+      if (!userId) return;
+      result.textContent = 'Updating...';
+      const baseUrl = form.dataset.toggleUrl;
+      const endpoint = baseUrl.replace('/0/toggle/', `/${userId}/toggle/`);
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': form.querySelector('input[name=\"csrfmiddlewaretoken\"]').value,
+          },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Unable to toggle premium status.');
+        }
+        result.textContent = `${data.user} is now ${data.is_premium ? 'Premium' : 'Free'}.`;
+        result.style.color = '#22c55e';
+      } catch (error) {
+        result.textContent = error.message;
+        result.style.color = '#ef4444';
+      }
+    });
+  })();
+
+  const chartColors = {
+    primary: '#8b5cf6',
+    secondary: '#a78bfa',
+  };
+
+  function maybeRenderChart(id, configFactory) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, configFactory());
+  }
+
+  maybeRenderChart('snapsWeek', () => ({
+    type: 'bar',
+    data: {
+      labels: {{ week_labels|safe }},
+      datasets: [{
+        label: 'Snapshots',
+        data: {{ week_counts|safe }},
+        backgroundColor: chartColors.secondary,
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      scales: { y: { beginAtZero: true } },
+      plugins: { legend: { display: false } },
+    },
+  }));
+
+  maybeRenderChart('snapsDay', () => ({
+    type: 'line',
+    data: {
+      labels: {{ day_labels|safe }},
+      datasets: [{
+        label: 'Snapshots',
+        data: {{ day_counts|safe }},
+        borderColor: chartColors.primary,
+        backgroundColor: 'rgba(139,92,246,0.15)',
+        fill: true,
+        tension: 0.35,
+      }],
+    },
+    options: { scales: { y: { beginAtZero: true } } },
+  }));
+
+  maybeRenderChart('providers', () => ({
+    type: 'doughnut',
+    data: {
+      labels: {{ provider_labels|safe }},
+      datasets: [{
+        data: {{ provider_counts|safe }},
+        backgroundColor: ['#7c3aed', '#22d3ee', '#f472b6', '#fde047', '#34d399'],
+      }],
+    },
+    options: { plugins: { legend: { position: 'bottom' } } },
+  }));
+
+  maybeRenderChart('topUsers', () => ({
+    type: 'bar',
+    data: {
+      labels: {{ top_user_labels|safe }},
+      datasets: [{
+        label: 'Snapshots',
+        data: {{ top_user_counts|safe }},
+        backgroundColor: chartColors.primary,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      scales: { x: { beginAtZero: true } },
+      plugins: { legend: { display: false } },
+    },
+  }));
+</script>
+{% endblock %}

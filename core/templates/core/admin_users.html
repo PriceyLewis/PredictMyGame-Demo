@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}User Management{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/levels.css' %}">
+{% endblock %}
+{% block content %}
+<div class="level-dashboard">
+  <div class="level-header">
+    <div>
+      <h1>User management</h1>
+      <p class="muted">Monitor plans, track premium adoption, and toggle access when needed.</p>
+    </div>
+    <div class="badge-ring">
+      <span>Active 30d</span>
+      <strong>{{ active_last_30 }}</strong>
+    </div>
+  </div>
+
+  <div class="level-toolbar">
+    <div class="toolbar-meta">
+      Total users: {{ total_users }} &bull; Premium: {{ premium_percentage }}% &bull; Trials: {{ trial_percentage }}%
+    </div>
+    <div class="level-actions">
+      <a class="level-btn" href="{% url 'core:admin_analytics' %}">Analytics</a>
+      <a class="level-btn secondary" href="{% url 'admin:index' %}">Django admin</a>
+    </div>
+  </div>
+
+  <form method="post" id="userActionsForm" style="display:none;">
+    {% csrf_token %}
+  </form>
+
+  <div class="grid grid-4">
+    <div class="card">
+      <h3>Total users</h3>
+      <div class="big-number">{{ total_users }}</div>
+      <p class="muted">Active last 30 days: {{ active_last_30 }}</p>
+    </div>
+    <div class="card">
+      <h3>Premium</h3>
+      <div class="big-number">{{ premium_users }}</div>
+      <p class="muted">{{ premium_percentage }}% of user base</p>
+    </div>
+    <div class="card">
+      <h3>Active trials</h3>
+      <div class="big-number">{{ trialing_users }}</div>
+      <p class="muted">{{ trial_percentage }}% of user base</p>
+    </div>
+    <div class="card">
+      <h3>Free plan</h3>
+      <div class="big-number">{{ free_users }}</div>
+      <p class="muted">{{ free_percentage }}% of user base</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="level-header" style="margin-bottom:0;">
+      <div>
+        <h3>Signup trend (last 14 days)</h3>
+        <p class="muted">Updated {{ now|date:"d M Y H:i" }}</p>
+      </div>
+    </div>
+    <div class="chart-wrap" style="min-height:220px;">
+      <canvas id="signupChart" height="160" aria-label="Signup chart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="level-header" style="margin-bottom:0;">
+      <div>
+        <h3>Users</h3>
+      </div>
+    </div>
+    <form method="get" class="inline-form" style="margin-top:1rem;">
+      <div class="form-field">
+        <label for="userSearch">Search</label>
+        <input id="userSearch" type="search" name="q" placeholder="Search name or email" value="{{ search_query }}">
+      </div>
+      <div class="form-field">
+        <label for="planFilter">Plan</label>
+        <select id="planFilter" name="plan">
+          <option value="all" {% if plan_filter == "all" %}selected{% endif %}>All plans</option>
+          <option value="premium" {% if plan_filter == "premium" %}selected{% endif %}>Premium</option>
+          <option value="trial" {% if plan_filter == "trial" %}selected{% endif %}>Active trial</option>
+          <option value="free" {% if plan_filter == "free" %}selected{% endif %}>Free</option>
+        </select>
+      </div>
+      <button class="btn secondary" type="submit">Apply</button>
+    </form>
+    <div class="table-responsive" style="margin-top:1.2rem;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Plan</th>
+            <th>Joined</th>
+            <th>Last login</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for profile in table_profiles %}
+          <tr>
+            <td>
+              <strong>{{ profile.user.get_full_name|default:profile.user.username }}</strong><br>
+              <span class="muted small">@{{ profile.user.username }}</span>
+            </td>
+            <td class="muted small">{{ profile.user.email|default:"--" }}</td>
+            <td>
+              {% if profile.is_premium %}
+                <span class="badge-premium">Premium</span>
+                {% if profile.premium_since %}
+                  <div class="muted small">since {{ profile.premium_since|date:"d M Y" }}</div>
+                {% endif %}
+              {% elif profile.trial_started_at and profile.trial_ends_at and not profile.trial_cancelled and profile.trial_ends_at >= now %}
+                <span class="badge-free">Trial</span>
+                <div class="muted small">ends {{ profile.trial_ends_at|date:"d M Y" }}</div>
+              {% else %}
+                <span class="badge-free">Free</span>
+              {% endif %}
+            </td>
+            <td class="muted small">{{ profile.joined_at|date:"d M Y" }}</td>
+            <td class="muted small">
+              {% if profile.user.last_login %}
+                {{ profile.user.last_login|date:"d M Y H:i" }}
+              {% else %}
+                --
+              {% endif %}
+            </td>
+            <td>
+              <button type="button"
+                      class="btn secondary toggle-premium-btn"
+                      data-toggle-url="{% url 'core:admin_toggle_premium' profile.user.id %}">
+                {% if profile.is_premium %}Set free{% else %}Make premium{% endif %}
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="muted" style="text-align:center;">No users match the current filters.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if table_truncated %}
+    <p class="muted small" style="margin-top:0.8rem;">Showing first {{ table_limit }} users. Refine your filters to narrow the list.</p>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Recent signups</h3>
+      <ul class="list">
+        {% for user in recent_signups %}
+        <li>
+          <div>
+            <strong>{{ user.get_full_name|default:user.username }}</strong><br>
+            <span class="muted small">{{ user.date_joined|date:"d M Y H:i" }}</span>
+          </div>
+          {% with profile=user.userprofile %}
+            {% if profile.is_premium %}
+              <span class="badge-premium">Premium</span>
+            {% elif profile.trial_started_at and profile.trial_ends_at and not profile.trial_cancelled and profile.trial_ends_at >= now %}
+              <span class="badge-free">Trial</span>
+            {% else %}
+              <span class="badge-free">Free</span>
+            {% endif %}
+          {% endwith %}
+        </li>
+        {% empty %}
+        <li class="muted">No signups yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <h3>New premium members</h3>
+      <ul class="list">
+        {% for profile in recent_premium %}
+        <li>
+          <div>
+            <strong>{{ profile.user.get_full_name|default:profile.user.username }}</strong><br>
+            <span class="muted small">Upgraded {{ profile.premium_since|date:"d M Y" }}</span>
+          </div>
+          <span class="badge-premium">Premium</span>
+        </li>
+        {% empty %}
+        <li class="muted">No premium upgrades yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{{ chart_labels|json_script:"signup-labels" }}
+{{ chart_values|json_script:"signup-values" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function () {
+  const labelsEl = document.getElementById('signup-labels');
+  const valuesEl = document.getElementById('signup-values');
+  if (labelsEl && valuesEl) {
+    const labels = JSON.parse(labelsEl.textContent);
+    const values = JSON.parse(valuesEl.textContent);
+    const ctx = document.getElementById('signupChart');
+    if (ctx && labels.length) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Signups',
+            data: values,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.15)',
+            borderWidth: 2,
+            tension: 0.35,
+            fill: true,
+            pointRadius: 3,
+          }],
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } },
+          },
+          plugins: { legend: { display: false } },
+        },
+      });
+    }
+  }
+
+  const form = document.getElementById('userActionsForm');
+  const csrfToken = form ? form.querySelector('[name=\"csrfmiddlewaretoken\"]').value : null;
+  document.querySelectorAll('.toggle-premium-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const endpoint = button.dataset.toggleUrl;
+      if (!endpoint || !csrfToken) return;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Updating...';
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Unable to update membership.');
+        }
+        window.location.reload();
+      } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

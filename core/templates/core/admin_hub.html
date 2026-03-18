@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin Hub{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+  --bg: #0f0b1a;
+  --bg-soft: #151027;
+  --card: #1b1433;
+  --card-2: #201a3f;
+  --text: #f4f2ff;
+  --muted: #cfc8ffcc;
+  --brand: #7c3aed;
+  --brand-2: #a78bfa;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+}
+body { background: var(--bg); color: var(--text); }
+.page { max-width: 1180px; margin: 0 auto; padding: 1.25rem; }
+.header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.2rem; gap: .8rem; flex-wrap: wrap; }
+.title { font-size:1.6rem; font-weight:800; }
+.actions { display:flex; gap:.6rem; flex-wrap: wrap; }
+
+.grid { display:grid; gap:1rem; }
+.grid-3 { grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
+.grid-2 { grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); }
+
+.card {
+  background: linear-gradient(180deg,var(--card),var(--card-2));
+  border:1px solid #2a214b;
+  border-radius:16px; padding:1rem 1.2rem 1.2rem;
+  box-shadow:0 6px 24px rgba(124,58,237,.15);
+}
+.card h3 { font-size:.95rem; color:#c4b5fd; letter-spacing:.4px; }
+.big { font-size:2rem; font-weight:800; }
+.subtle { color:var(--muted); font-size:.85rem; margin-top:.3rem; }
+
+.btn {
+  background: linear-gradient(135deg,var(--brand),var(--brand-2));
+  color:white; padding:.55rem .9rem; border-radius:.7rem;
+  text-decoration:none; font-weight:600; transition:0.3s;
+  border:none; cursor:pointer;
+}
+.btn.secondary { background:#2a214b; border:1px solid #3b2c68; }
+.btn.ghost { background:transparent; border:1px dashed #3b2c68; color:var(--muted); }
+.btn:hover { filter: brightness(1.1); }
+
+.badge { font-size:.75rem; padding:0.25rem 0.55rem; border-radius:6px; margin-left:.3rem; }
+.bg-success { background:var(--ok); color:white; }
+.bg-secondary { background:#444; color:#ddd; }
+.bg-warn { background:var(--warn); color:#0f0b1a; }
+.bg-danger { background:var(--danger); color:white; }
+
+.list-group { list-style:none; padding:0; margin:0; }
+.list-group-item {
+  background:var(--card-2); border:1px solid #2a214b; border-radius:10px;
+  padding:.8rem 1rem; margin-bottom:.5rem;
+  display:flex; justify-content:space-between; align-items:center;
+  transition:0.3s;
+}
+.list-group-item:hover { background:#221b41; }
+
+.search-bar {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:1rem; flex-wrap: wrap; gap: 0.6rem;
+}
+.search-box input {
+  width:260px; padding:0.55rem 0.75rem; border-radius:8px;
+  border:1px solid #3b2b6b; background:#1b1433; color:var(--text);
+  font-size:0.9rem; outline:none;
+}
+.search-box input::placeholder { color:var(--muted); }
+
+.filter-group { display:flex; gap:0.4rem; flex-wrap: wrap; }
+.filter-btn {
+  background:#1b1433; border:1px solid #3b2b6b; border-radius:8px;
+  color:var(--muted); padding:0.45rem 0.8rem; cursor:pointer;
+  font-size:0.85rem; transition:0.3s;
+}
+.filter-btn.active {
+  background:linear-gradient(135deg,var(--brand),var(--brand-2));
+  color:white; border:none;
+}
+.filter-btn:hover { color:white; border-color:var(--brand-2); }
+
+.collapse-container {
+  overflow:hidden; transition:max-height .5s ease,opacity .5s ease;
+}
+.collapse-hidden { max-height:0; opacity:0; pointer-events:none; }
+.collapse-visible { max-height:900px; opacity:1; }
+
+.toggle-btn {
+  display:inline-block; margin-bottom:1rem; font-size:0.9rem;
+  background:linear-gradient(135deg,var(--brand),var(--brand-2));
+  color:white; padding:0.45rem 0.8rem; border-radius:6px;
+  cursor:pointer; border:none; transition:0.3s;
+}
+.toggle-btn:hover { filter:brightness(1.15); }
+
+.counter-bar { margin-bottom:1rem; }
+.progress-wrap {
+  background:#1b1433; border-radius:10px; overflow:hidden;
+  height:16px; position:relative;
+}
+.progress-bar { height:100%; width:0; transition:width .5s ease; }
+.progress-premium { background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+.progress-free { background:#3b2b6b; }
+.progress-trial { background:#f59e0b; }
+
+.counter-text {
+  display:flex; justify-content:space-between; flex-wrap:wrap; gap:.4rem;
+  font-size:0.85rem; color:var(--muted);
+  margin-top:0.4rem;
+}
+.counter-text span { color:var(--brand-2); font-weight:600; }
+
+.pill { display:inline-block; padding:0.35rem 0.7rem; border-radius:999px; background:#2a214b; color:var(--muted); font-size:0.8rem; }
+.muted { color:var(--muted); }
+</style>
+
+<div class="page">
+  <div class="header-row">
+    <div>
+      <div class="title">Admin Hub</div>
+      <p class="muted" style="margin-top:0.2rem;">Unified controls for analytics, billing, user access, and platform health.</p>
+    </div>
+    <div class="actions">
+      <a href="{% url 'admin:index' %}" class="btn secondary">Django Admin</a>
+      <a href="{% url 'core:admin_analytics' %}" class="btn ghost">Analytics</a>
+      <a href="{% url 'core:system_health' %}" class="btn ghost">System Health</a>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <h3>Total users</h3>
+      <div class="big">{{ total_users }}</div>
+      <div class="subtle">New last 7d: {{ recent_users }}</div>
+    </div>
+    <div class="card">
+      <h3>Premium</h3>
+      <div class="big" style="color:var(--brand-2)">{{ premium_users }}</div>
+      <div class="subtle">{{ premium_users }} of {{ total_users }} users</div>
+    </div>
+    <div class="card">
+      <h3>Active last 7d</h3>
+      <div class="big" style="color:var(--ok)">{{ active_last_7 }}</div>
+      <div class="subtle">Logins in the past week</div>
+    </div>
+    <div class="card">
+      <h3>Trialing</h3>
+      <div class="big" style="color:var(--warn)">{{ trial_active }}</div>
+      <div class="subtle">Expiring ≤14d: {{ trial_expiring_14 }}</div>
+    </div>
+    <div class="card">
+      <h3>Modules tracked</h3>
+      <div class="big">{{ modules_total }}</div>
+      <div class="subtle">Across all levels</div>
+    </div>
+    <div class="card">
+      <h3>Pending deadlines</h3>
+      <div class="big">{{ pending_deadlines }}</div>
+      <div class="subtle">From system health feed</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:1rem;">
+    <div class="card">
+      <h3>Operational signals</h3>
+      <ul class="list-group" style="margin-top:0.6rem;">
+        <li class="list-group-item"><div>Bug reports (7d)</div><strong>{{ bug_reports }}</strong></li>
+        <li class="list-group-item"><div>Support messages (7d)</div><strong>{{ support_msgs }}</strong></li>
+        <li class="list-group-item"><div>Data exports (7d)</div><strong>{{ exports }}</strong></li>
+        <li class="list-group-item"><div>Account deletions (7d)</div><strong>{{ deletions }}</strong></li>
+        <li class="list-group-item"><div>AI insights created</div><strong>{{ health_counts.smart_insights }}</strong></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>OAuth providers</h3>
+      {% if provider_data %}
+        <ul class="list-group" style="margin-top:0.6rem;">
+          {% for provider, total in provider_data.items %}
+            <li class="list-group-item">
+              <div>{{ provider }}</div>
+              <span class="badge bg-secondary">{{ total }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="subtle" style="margin-top:0.6rem;">No social login data yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <h3>Signups (last 7 days)</h3>
+    <canvas id="userChart" height="90" style="margin-top:0.8rem;"></canvas>
+  </div>
+
+  {% if request.user.is_superuser %}
+  <div class="card" style="margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:.6rem;">
+      <h3>Manage premium access</h3>
+      <button id="toggleUsers" class="toggle-btn" type="button">Show list</button>
+    </div>
+
+    <div id="collapseUsers" class="collapse-container collapse-hidden">
+      <form id="adminHubCsrf">{% csrf_token %}</form>
+      <div class="counter-bar">
+        <div class="progress-wrap">
+          <div id="barPremium" class="progress-bar progress-premium"></div>
+          <div id="barTrial" class="progress-bar progress-trial"></div>
+          <div id="barFree" class="progress-bar progress-free"></div>
+        </div>
+        <div class="counter-text">
+          <div>Premium: <span id="countPremium">0</span></div>
+          <div>Trial: <span id="countTrial">0</span></div>
+          <div>Free: <span id="countFree">0</span></div>
+          <div>Total: <span id="countTotal">0</span></div>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <div class="search-box">
+          <input type="text" id="userSearch" placeholder="Search users by name or email..." value="{{ search_query }}">
+        </div>
+        <div class="filter-group">
+          <button class="filter-btn {% if plan_filter == 'all' %}active{% endif %}" data-filter="all" type="button">All</button>
+          <button class="filter-btn {% if plan_filter == 'premium' %}active{% endif %}" data-filter="premium" type="button">Premium</button>
+          <button class="filter-btn {% if plan_filter == 'trial' %}active{% endif %}" data-filter="trial" type="button">Trial</button>
+          <button class="filter-btn {% if plan_filter == 'free' %}active{% endif %}" data-filter="free" type="button">Free</button>
+        </div>
+      </div>
+
+      <ul class="list-group" id="userList">
+        {% for u in users %}
+          <li class="list-group-item" data-type="{% if u.userprofile.is_premium %}premium{% elif u.userprofile.trial_started_at and u.userprofile.trial_ends_at and not u.userprofile.trial_cancelled and u.userprofile.trial_ends_at >= now %}trial{% else %}free{% endif %}">
+            <div>
+              <strong>{{ u.get_full_name|default:u.username }}</strong>
+              <div class="subtle">@{{ u.username }}{% if u.email %} • {{ u.email }}{% endif %}</div>
+              {% if u.userprofile.is_premium %}
+                <span class="badge bg-success">Premium</span>
+                {% if u.userprofile.premium_since %}
+                  <small class="subtle">since {{ u.userprofile.premium_since|date:"d M Y" }}</small>
+                {% endif %}
+              {% elif u.userprofile.trial_started_at and u.userprofile.trial_ends_at and not u.userprofile.trial_cancelled and u.userprofile.trial_ends_at >= now %}
+                <span class="badge bg-warn">Trial</span>
+                <small class="subtle">ends {{ u.userprofile.trial_ends_at|date:"d M Y" }}</small>
+              {% else %}
+                <span class="badge bg-secondary">Free</span>
+              {% endif %}
+            </div>
+            <div>
+              <button type="button"
+                      class="btn secondary btn-sm toggle-premium-btn"
+                      data-toggle-url="{% url 'core:admin_toggle_premium' u.id %}">
+                {% if u.userprofile.is_premium %}Set free{% else %}Make premium{% endif %}
+              </button>
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No users found.</li>
+        {% endfor %}
+      </ul>
+      {% if user_list_truncated %}
+        <p class="subtle" style="margin-top:0.5rem;">List truncated for speed. Narrow your search to view more.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+(() => {
+  const ctx = document.getElementById('userChart');
+  if (ctx) {
+    new Chart(ctx.getContext('2d'), {
+      type:'line',
+      data:{
+        labels:{{ days|safe }},
+        datasets:[{
+          label:'Signups',
+          data:{{ counts|safe }},
+          fill:true,
+          backgroundColor:'rgba(124,58,237,0.15)',
+          borderColor:'#a78bfa',
+          borderWidth:2,
+          tension:0.4,
+          pointRadius:4,
+          pointBackgroundColor:'#c4b5fd'
+        }]
+      },
+      options:{
+        scales:{y:{beginAtZero:true,ticks:{color:'#cfc8ffcc'}},
+                x:{ticks:{color:'#cfc8ffcc'}}},
+        plugins:{legend:{display:false}}
+      }
+    });
+  }
+
+  const searchInput=document.getElementById('userSearch');
+  const filterBtns=document.querySelectorAll('.filter-btn');
+  const userItems=document.querySelectorAll('#userList .list-group-item');
+  const countPremium=document.getElementById('countPremium');
+  const countFree=document.getElementById('countFree');
+  const countTrial=document.getElementById('countTrial');
+  const countTotal=document.getElementById('countTotal');
+  const barPremium=document.getElementById('barPremium');
+  const barFree=document.getElementById('barFree');
+  const barTrial=document.getElementById('barTrial');
+  const csrfInput=document.querySelector('#adminHubCsrf input[name="csrfmiddlewaretoken"]');
+
+  function updateCounters(){
+    let premium=0,free=0,trial=0,total=0;
+    userItems.forEach(li=>{
+      if(li.style.display!=='none'){
+        total++;
+        if(li.dataset.type==='premium'){premium++;}
+        else if(li.dataset.type==='trial'){trial++;}
+        else {free++;}
+      }
+    });
+    countPremium.textContent=premium;
+    countFree.textContent=free;
+    countTrial.textContent=trial;
+    countTotal.textContent=total;
+
+    const percentPrem=total? (premium/total)*100 : 0;
+    const percentTrial=total? (trial/total)*100 : 0;
+    barPremium.style.width=percentPrem+'%';
+    barTrial.style.width=percentTrial+'%';
+    barFree.style.width=(100 - percentPrem - percentTrial)+'%';
+  }
+
+  function filterUsers(){
+    const query=(searchInput?.value || '').toLowerCase();
+    const activeBtn=document.querySelector('.filter-btn.active');
+    const active=activeBtn?activeBtn.dataset.filter:'all';
+    userItems.forEach(li=>{
+      const name=li.querySelector('strong')?.textContent.toLowerCase() || '';
+      const meta=li.querySelector('.subtle')?.textContent.toLowerCase() || '';
+      const type=li.dataset.type;
+      const show=(active==='all'||type===active)&&(name.includes(query)||meta.includes(query));
+      li.style.display=show?'':'none';
+    });
+    updateCounters();
+  }
+  searchInput?.addEventListener('input',filterUsers);
+  filterBtns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      filterBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active'); filterUsers();
+    });
+  });
+
+  const toggleBtn=document.getElementById('toggleUsers');
+  const collapse=document.getElementById('collapseUsers');
+  let open=false;
+  if (toggleBtn && collapse) {
+    toggleBtn.addEventListener('click',()=>{
+      open=!open;
+      collapse.classList.toggle('collapse-visible',open);
+      collapse.classList.toggle('collapse-hidden',!open);
+      toggleBtn.textContent=open?"Hide list":"Show list";
+      if(open) filterUsers();
+    });
+  }
+
+  document.querySelectorAll('.toggle-premium-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const endpoint = button.dataset.toggleUrl;
+      if (!endpoint || !csrfInput) return;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Updating...';
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfInput.value,
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Unable to update membership.');
+        }
+        window.location.reload();
+      } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

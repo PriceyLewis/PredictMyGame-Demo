@@ -1,0 +1,297 @@
+﻿// Dark mode toggle persists
+(function () {
+  const root = document.documentElement;
+  const body = document.body;
+  const key = "predictmygrade-theme";
+  const toggles = document.querySelectorAll("[data-theme-toggle]");
+
+  function updateToggleVisual(btn, isDark) {
+    if (!btn) return;
+    btn.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+    const textLabel = btn.querySelector("[data-theme-toggle-label]");
+    if (textLabel) {
+      textLabel.textContent = isDark ? "Dark mode" : "Light mode";
+    }
+    const symbol = btn.querySelector("[data-theme-toggle-icon]");
+    if (symbol) {
+      symbol.textContent = isDark ? "☾" : "☼";
+    }
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.classList.toggle("fa-moon", !isDark);
+      icon.classList.toggle("fa-sun", isDark);
+    }
+  }
+
+  function applyTheme(theme, { persist = true } = {}) {
+    const resolved = theme === "light" ? "light" : "dark";
+    const isDark = resolved !== "light";
+    root.classList.remove("theme-dark", "theme-light");
+    root.classList.add(isDark ? "theme-dark" : "theme-light");
+    if (body) {
+      body.classList.remove("theme-dark", "theme-light");
+      body.classList.add(isDark ? "theme-dark" : "theme-light");
+    }
+    toggles.forEach((btn) => updateToggleVisual(btn, isDark));
+    if (persist) {
+      try {
+        localStorage.setItem(key, resolved);
+      } catch (error) {
+        console.warn("PredictMyGrade: unable to persist theme", error);
+      }
+    }
+  }
+
+  const initial =
+    localStorage.getItem(key) ||
+    (root.classList.contains("theme-light") || body?.classList.contains("theme-light")
+      ? "light"
+      : "dark");
+  applyTheme(initial, { persist: false });
+
+  const toggleTheme = () => {
+    const nextTheme = root.classList.contains("theme-light") ? "dark" : "light";
+    applyTheme(nextTheme);
+  };
+
+  toggles.forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      toggleTheme();
+    });
+  });
+})();
+
+// ML demo on dashboard
+(function () {
+  const forms = document.querySelectorAll("[data-ml-form]");
+  if (!forms.length) return;
+
+  forms.forEach((form) => {
+    const container = form.closest("[data-ml-card]") || form.parentElement || form;
+    const avgField = container?.querySelector("[data-avg-input]");
+    const creditsField = container?.querySelector("[data-credits-input]");
+    const resultNode = container?.querySelector("[data-ml-result]");
+    if (!avgField || !creditsField || !resultNode) {
+      return;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const avg = parseFloat(avgField.value);
+      const credits = parseFloat(creditsField.value);
+      if (Number.isNaN(avg) || Number.isNaN(credits)) {
+        resultNode.textContent = "Enter both average and credits to run a prediction.";
+        return;
+      }
+
+      resultNode.textContent = "Predicting...";
+      avgField.disabled = true;
+      creditsField.disabled = true;
+      const submitBtn = form.querySelector("button");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.originalText = submitBtn.dataset.originalText || submitBtn.textContent;
+        submitBtn.textContent = "Predicting...";
+      }
+      try {
+        const body = new URLSearchParams();
+        body.set("avg_so_far", avg.toString());
+        body.set("credits_done", credits.toString());
+        body.set("difficulty_index", "0.6");
+        body.set("performance_variance", "0.3");
+        body.set("engagement_score", "0.7");
+
+        const headers = {};
+        const csrfToken = getCookie("csrftoken");
+        if (csrfToken) {
+          headers["X-CSRFToken"] = csrfToken;
+        }
+
+        const res = await fetch("/ai/predict/", {
+          method: "POST",
+          headers,
+          body,
+        });
+        let payload = null;
+        try {
+          payload = await res.json();
+        } catch {
+          payload = null;
+        }
+        if (!res.ok) {
+          const message =
+            payload?.limit_note ||
+            payload?.error ||
+            `Request failed with status ${res.status}`;
+          resultNode.textContent = message;
+          if (payload?.limit_note && window.showToast) {
+            window.showToast(payload.limit_note, "info");
+          }
+          return;
+        }
+        if (payload?.error) {
+          resultNode.textContent = `Prediction unavailable (${payload.error})`;
+          if (payload.limit_note && window.showToast) {
+            window.showToast(payload.limit_note, "info");
+          }
+          return;
+        }
+        resultNode.innerHTML = `
+          <strong>${payload.predicted_classification}</strong><br>
+          Predicted Average: ${payload.predicted_average}%<br>
+          Confidence: ${payload.confidence ?? "n/a"}%<br>
+          Model: ${payload.mode || "Adaptive model"}
+        `;
+        if (payload?.limit_note) {
+          const note = document.createElement("p");
+          note.className = "muted small mt-0-4";
+          note.textContent = payload.limit_note;
+          resultNode.appendChild(note);
+          if (window.showToast) {
+            window.showToast(payload.limit_note, "info");
+          }
+        }
+      } catch (err) {
+        resultNode.textContent = "Prediction error.";
+      } finally {
+        avgField.disabled = false;
+        creditsField.disabled = false;
+        const submitBtnReset = form.querySelector("button");
+        if (submitBtnReset) {
+          const label = submitBtnReset.dataset.originalText || "Run Prediction";
+          submitBtnReset.disabled = false;
+          submitBtnReset.textContent = label;
+        }
+      }
+    });
+  });
+
+  // CSRF util
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    if (m) return m[2];
+  }
+})();
+
+// === Toastify helper ===
+function showToast(msg, type = "info") {
+  const colors = {
+    info: "linear-gradient(to right, #6366f1, #8b5cf6)",
+    success: "linear-gradient(to right, #22c55e, #16a34a)",
+    error: "linear-gradient(to right, #ef4444, #dc2626)",
+  };
+  if (typeof Toastify !== "function") {
+    console.warn("PredictMyGrade: toast notification requested but Toastify is unavailable.");
+    return;
+  }
+  Toastify({
+    text: msg,
+    duration: 3200,
+    stopOnFocus: false,
+    close: true,
+    gravity: "top",
+    position: "right",
+    style: {
+      background: colors[type] || colors.info,
+      borderRadius: "8px",
+      fontWeight: "500",
+      boxShadow: "0 12px 24px rgba(8,7,19,0.5)",
+    },
+  }).showToast();
+}
+window.showToast = showToast;
+
+// Cookie consent manager
+(function () {
+  const consentKey = "pmg.cookieConsent";
+  const cookieName = "pmg_cookie_consent";
+  const banner = document.querySelector("[data-cookie-banner]");
+  const modal = document.querySelector("[data-cookie-modal]");
+  const acceptBtn = document.querySelector("[data-cookie-accept]");
+  const declineBtn = document.querySelector("[data-cookie-decline]");
+  const manageBtn = document.querySelector("[data-cookie-manage]");
+  const analyticsToggle = document.querySelector("[data-cookie-analytics]");
+  const saveBtn = document.querySelector("[data-cookie-save]");
+  const closeBtns = document.querySelectorAll("[data-cookie-close]");
+  const prefOpeners = document.querySelectorAll("[data-cookie-open]");
+  if (!banner || !modal) return;
+
+  const setConsent = (value, silent = false) => {
+    localStorage.setItem(consentKey, value);
+    document.cookie = `${cookieName}=${value};path=/;max-age=31536000;SameSite=Lax`;
+    document.documentElement.dataset.analyticsConsent = value;
+    if (!silent) {
+      window.dispatchEvent(
+        new CustomEvent("pmg:cookie-consent", { detail: { value } })
+      );
+    }
+    window.PMGConsent = window.PMGConsent || {};
+    window.PMGConsent.value = value;
+  };
+
+  const currentConsent = () => {
+    const stored = localStorage.getItem(consentKey);
+    if (stored) return stored;
+    const match = document.cookie.match(new RegExp(`(?:^| )${cookieName}=([^;]+)`));
+    return match ? match[1] : "";
+  };
+
+  const updateUI = () => {
+    const value = currentConsent();
+    if (value) {
+      banner.hidden = true;
+      modal.hidden = true;
+      modal.setAttribute("aria-hidden", "true");
+      if (analyticsToggle) {
+        analyticsToggle.checked = value === "analytics";
+      }
+    } else {
+      banner.hidden = false;
+    }
+  };
+
+  const openModal = () => {
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    if (analyticsToggle) {
+      analyticsToggle.checked = currentConsent() === "analytics";
+    }
+  };
+
+  const closeModal = () => {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+  };
+
+  acceptBtn?.addEventListener("click", () => {
+    setConsent("analytics");
+    banner.hidden = true;
+    closeModal();
+  });
+
+  declineBtn?.addEventListener("click", () => {
+    setConsent("essential");
+    banner.hidden = true;
+    closeModal();
+  });
+
+  manageBtn?.addEventListener("click", openModal);
+  prefOpeners.forEach((btn) => btn.addEventListener("click", openModal));
+  closeBtns.forEach((btn) => btn.addEventListener("click", closeModal));
+
+  saveBtn?.addEventListener("click", () => {
+    setConsent(analyticsToggle.checked ? "analytics" : "essential");
+    closeModal();
+  });
+
+  window.PMGConsent = {
+    value: currentConsent() || null,
+    acceptAnalytics: () => setConsent("analytics"),
+    declineAnalytics: () => setConsent("essential"),
+  };
+
+  updateUI();
+})();
+

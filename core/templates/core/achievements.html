@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Achievements{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+<style>
+  .achievements-hero {
+    max-width: 960px;
+    margin: 2rem auto;
+    text-align: center;
+  }
+
+  .achievement-grid {
+    display: grid;
+    gap: 1.4rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    margin-top: 2rem;
+  }
+
+  .achievement-card {
+    background: linear-gradient(160deg, #0f172a, #111827);
+    color: #e2e8f0;
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 18px 30px rgba(15, 23, 42, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    position: relative;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .achievement-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 22px 40px rgba(67, 56, 202, 0.35);
+  }
+
+  .achievement-card.locked {
+    opacity: 0.65;
+    filter: grayscale(0.4);
+  }
+
+  .achievement-icon {
+    font-size: 2.6rem;
+  }
+
+  .achievement-meta {
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  .achievement-progress {
+    font-size: 0.85rem;
+    color: #a5b4fc;
+  }
+
+  .share-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(79, 70, 229, 0.15);
+    color: #c7d2fe;
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: background 0.2s ease;
+  }
+
+  .share-chip:hover {
+    background: rgba(99, 102, 241, 0.35);
+  }
+
+  .recent-grid {
+    margin-top: 3rem;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .recent-grid ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .recent-grid li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.9);
+    padding: 0.9rem 1.1rem;
+    border-radius: 12px;
+  }
+
+  .next-focus {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #a5b4fc;
+  }
+</style>
+
+<section class="achievements-hero">
+  <h1 class="title">✨ Achievements</h1>
+  <p class="muted">You have unlocked {{ unlocked_count }} of {{ total_count }} achievements.</p>
+  {% if next_focus %}
+    <p class="next-focus">Next up: <strong>{{ next_focus.title }}</strong> &mdash; {{ next_focus.description }}</p>
+  {% endif %}
+
+  <div class="achievement-grid">
+    {% for item in achievements %}
+      <div class="achievement-card {% if not item.unlocked %}locked{% endif %}">
+        <div class="achievement-icon">{{ item.emoji|default:"🌟" }}</div>
+        <h3>{{ item.title }}</h3>
+        <p>{{ item.description }}</p>
+        <div class="achievement-meta">Category: {{ item.category }}</div>
+        {% if item.unlocked %}
+          <div class="achievement-meta">Unlocked on {{ item.unlocked_at|date:"j M Y" }}</div>
+          {% if item.share_url %}
+            <a href="{{ item.share_url }}" target="_blank" rel="noopener" class="share-chip">Share achievement</a>
+          {% endif %}
+        {% else %}
+          {% if item.metric == 'has_premium' %}
+            <div class="achievement-progress">Activate Premium to unlock.</div>
+          {% else %}
+            <div class="achievement-progress">Current: {{ item.value|floatformat:1 }} / {{ item.threshold|floatformat:1 }}</div>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% empty %}
+      <p>No achievements yet &mdash; start logging modules and snapshots to build momentum.</p>
+    {% endfor %}
+  </div>
+
+  <div class="recent-grid">
+    <h2 style="margin-bottom:1rem;">Recently unlocked</h2>
+    {% if recent_achievements %}
+      <ul>
+        {% for item in recent_achievements %}
+          <li>
+            <span>{{ item.emoji|default:"🌟" }} {{ item.title }}</span>
+            <span>
+              <span class="achievement-meta">{{ item.unlocked_at|date:"j M Y" }}</span>
+              <a href="{{ item.share_url }}" target="_blank" rel="noopener" class="share-chip">Share</a>
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Unlock achievements to populate this feed.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

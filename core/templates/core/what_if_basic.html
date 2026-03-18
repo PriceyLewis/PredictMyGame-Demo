@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}🎓 Basic What-If Simulator{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+    body {
+      background: #111827;
+      color: #e5e7eb;
+      font-family: 'Inter', sans-serif;
+      padding: 2rem;
+    }
+    .container {
+      background: #1f2937;
+      padding: 2rem;
+      border-radius: 10px;
+      max-width: 800px;
+      margin: auto;
+      position: relative;
+    }
+    table { width:100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: .6rem; border-bottom: 1px solid #374151; }
+    input {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+      border-radius: 4px;
+      padding: 0.4rem;
+      width: 100%;
+    }
+    .btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+    .btn:hover { background: #2563eb; }
+
+    .results {
+      background: #0f172a;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+    }
+
+    .compare-btn {
+      background: linear-gradient(90deg, #fbbf24, #f59e0b);
+      color: black;
+      padding: 0.8rem 1.2rem;
+      border-radius: 6px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+    .compare-btn:hover { opacity: 0.9; }
+
+    /* Modal styling */
+    .modal-bg {
+      position: fixed;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.7);
+      display:none;
+      justify-content:center;
+      align-items:center;
+      z-index:1000;
+    }
+    .modal {
+      background:#1f2937;
+      padding:2rem;
+      border-radius:10px;
+      max-width:500px;
+      text-align:center;
+      box-shadow:0 0 20px rgba(124,58,237,0.5);
+      animation:fadeIn .3s ease;
+    }
+    @keyframes fadeIn {
+      from{opacity:0; transform:scale(0.9);}
+      to{opacity:1; transform:scale(1);}
+    }
+    .modal h2 {
+      color:#c4b5fd;
+      margin-bottom:1rem;
+    }
+    .modal p {
+      color:#d1d5db;
+      font-size:0.95rem;
+    }
+    .modal .upgrade-btn {
+      display:inline-block;
+      margin-top:1.4rem;
+      padding:0.7rem 1.2rem;
+      background:linear-gradient(90deg,#8b5cf6,#ec4899);
+      border:none;
+      color:white;
+      border-radius:6px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .modal .upgrade-btn:hover { opacity:0.9; }
+    .close-btn {
+      background:none;
+      border:none;
+      color:#9ca3af;
+      position:absolute;
+      right:20px; top:15px;
+      font-size:1.2rem;
+      cursor:pointer;
+    }
+    .close-btn:hover { color:white; }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="container">
+  <h1>🎓 Basic What-If Simulator</h1>
+  <p>Estimate your predicted average by adding simulated modules below.</p>
+
+  <form method="POST">
+    {% csrf_token %}
+    <table>
+      <tr><th>Predicted Mark</th><th>Credits</th></tr>
+      {% for i in "12345" %}
+        <tr>
+          <td><input type="number" step="0.1" name="sim_mark" placeholder="e.g. 70"></td>
+          <td><input type="number" step="1" name="sim_credits" placeholder="e.g. 20"></td>
+        </tr>
+      {% endfor %}
+    </table>
+    <button type="submit" class="btn">Run Simulation</button>
+  </form>
+
+  {% if simulated_points %}
+    <div class="results">
+      <h3>Predicted Outcomes</h3>
+      <ul>
+        {% for s,c in simulated_points|zip:classifications %}
+          <li>📊 {{ s }}% — {{ c }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% elif error %}
+    <p style="color:red;">⚠️ {{ error }}</p>
+  {% endif %}
+
+  <!-- Upgrade Banner -->
+  <div class="banner" style="margin-top:2rem; background:rgba(124,58,237,0.15); border:1px dashed #7c3aed; padding:1rem; border-radius:8px; text-align:center; color:#c4b5fd;">
+    💎 <strong>Upgrade to Premium</strong> to access advanced AI simulations, real-time charts, and history tracking.<br>
+    <button id="openModal" class="compare-btn">💎 Compare with AI Version</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="premiumModal">
+  <div class="modal">
+    <button class="close-btn" id="closeModal">&times;</button>
+    <h2>💎 Premium Feature</h2>
+    <p>Upgrade to <strong>PredictMyGrade Premium</strong> to unlock:</p>
+    <ul style="text-align:left; margin:1rem auto; width:max-content;">
+      <li>📈 AI-powered What-If simulations</li>
+      <li>📊 Live interactive charts</li>
+      <li>💾 Save & compare simulation history</li>
+      <li>🎯 Smart study suggestions</li>
+    </ul>
+    <a href="{% url 'core:upgrade' %}" class="upgrade-btn">Upgrade Now</a>
+  </div>
+</div>
+
+<script>
+const modal = document.getElementById('premiumModal');
+document.getElementById('openModal').onclick = () => modal.style.display='flex';
+document.getElementById('closeModal').onclick = () => modal.style.display='none';
+window.onclick = (e) => { if(e.target===modal) modal.style.display='none'; };
+</script>
+{% endblock %}

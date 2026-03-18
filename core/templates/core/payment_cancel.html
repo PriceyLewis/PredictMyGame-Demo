@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout Cancelled{% endblock %}
+{% block content %}
+<div class="page">
+  <h1>{% if billing_is_mock %}Demo Checkout Cancelled{% else %}Payment Cancelled{% endif %}</h1>
+  <p>
+    {% if billing_is_mock %}
+      The mock checkout was not completed. Your account stays on its current plan and no payment attempt was made.
+    {% else %}
+      Your subscription was not completed. You can try again any time.
+    {% endif %}
+  </p>
+  <a href="{% url 'core:upgrade' %}" class="btn secondary">Back to Upgrade</a>
+</div>
+{% endblock %}

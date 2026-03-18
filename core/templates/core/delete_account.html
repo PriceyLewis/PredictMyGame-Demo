@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delete Account | PredictMyGrade{% endblock %}
+{% block body_attrs %} class="bg-light text-center p-5"{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="text-danger mb-4">Confirm account deletion</h2>
+  <p class="lead">Deleting your account removes every module, prediction, study plan, and AI chat linked to you.</p>
+  <div class="alert alert-warning text-start" role="alert">
+    <strong>Before you continue:</strong>
+    <ul class="mb-0 mt-2">
+      <li>Save any exports or backups first (visit the <a href="{% url 'core:privacy_dashboard' %}">Privacy dashboard</a>).</li>
+      <li>This action is immediate and cannot be undone.</li>
+      <li>Redundant encrypted backups are purged within 30 days.</li>
+    </ul>
+  </div>
+  <form method="post" class="mt-4">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger px-4">Yes, delete my account</button>
+    <a href="{% url 'core:settings' %}" class="btn btn-secondary px-4 ms-2">Cancel</a>
+  </form>
+</div>
+{% endblock %}

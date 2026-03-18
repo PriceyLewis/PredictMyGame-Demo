@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Something went wrong · PredictMyGrade</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/predictmygrade-favicon.svg' %}">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d0c1f;
+        --card: #181531;
+        --accent: #f97316;
+        --accent-soft: #fbbf24;
+        --text: #fefce8;
+        --muted: #b5b2cf;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at 20% 20%, rgba(249,115,22,.4), transparent 40%), var(--bg);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        padding: 2.5rem 1.5rem;
+      }
+      main {
+        max-width: 560px;
+        width: 100%;
+        background: var(--card);
+        border-radius: 20px;
+        padding: 2.75rem;
+        border: 1px solid rgba(251,191,36,.35);
+        box-shadow: 0 25px 55px rgba(8,7,19,.55);
+        text-align: center;
+      }
+      .eyebrow {
+        font-size: .85rem;
+        letter-spacing: .2em;
+        color: var(--accent-soft);
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0.8rem 0 0.3rem;
+        font-size: clamp(2rem, 4vw, 2.7rem);
+      }
+      p {
+        margin: 0 auto 1.75rem;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+        justify-content: center;
+      }
+      a.error-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.8rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: transform .2s ease, box-shadow .2s ease;
+      }
+      a.error-link.primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-soft));
+        color: #1b122d;
+        box-shadow: 0 12px 30px rgba(249,115,22,.35);
+      }
+      a.error-link.secondary {
+        border: 1px solid rgba(251,191,36,.4);
+        color: var(--accent-soft);
+      }
+      a.error-link:hover {
+        transform: translateY(-2px);
+      }
+      footer {
+        margin-top: 1.5rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Error 500</p>
+      <h1>We hit a snag.</h1>
+      <p>Our servers couldn't complete that request. The team has been notified automatically, but you can retry in a moment or let us know what happened.</p>
+      <div class="actions" role="group" aria-label="500 navigation shortcuts">
+        {% if request.user.is_authenticated %}
+        <a class="error-link primary" href="{% url 'core:dashboard' %}">Back to dashboard</a>
+        {% else %}
+        <a class="error-link primary" href="{% url 'account_login' %}">Sign in</a>
+        {% endif %}
+        <a class="error-link secondary" href="{% url 'core:contact_support' %}">Contact support</a>
+      </div>
+      <footer>Need urgent help? Email <a href="mailto:support@predictmygrade.com" style="color:inherit;text-decoration:underline;">support@predictmygrade.com</a></footer>
+    </main>
+  </body>
+</html>
