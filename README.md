@@ -1,15 +1,23 @@
 # PredictMyGrade
 
-PredictMyGrade is a Django web app for tracking academic progress, forecasting outcomes, planning study time, and previewing premium features with mock billing enabled for local development.
+PredictMyGrade is a full-stack Django product mockup for student progress tracking, grade forecasting, study planning, and premium feature upsell flows. It was built as a portfolio project to demonstrate shipping a feature-rich web application with product thinking, backend logic, test coverage, and deployment-ready configuration.
 
-The project includes:
+## What This Project Demonstrates
 
-- A student dashboard with weighted averages, progress summaries, and AI prediction metrics.
-- Module management for university and GCSE-style workflows.
-- Study planning tools, goals, deadlines, snapshots, and calendar export for premium users.
-- AI-powered reporting, mentor chat, planning helpers, and what-if forecasting.
-- Mock premium checkout and cancellation flows for demo and local testing.
-- Admin tools for analytics, billing visibility, system health, and user management.
+- End-to-end product design rather than a single isolated feature
+- Django application architecture with authentication, admin tooling, services, and background-task hooks
+- AI-assisted features with safe fallback behaviour when no API key is configured
+- Premium feature gating and mock billing flows suitable for demos and local review
+- Automated testing across backend and browser-level smoke flows
+
+## Core Features
+
+- Student dashboard with weighted averages, progress summaries, and AI prediction metrics
+- Module management for university and GCSE-style workflows
+- Study planning tools, goals, deadlines, snapshots, and calendar export
+- AI-powered reporting, mentor chat, planning helpers, and what-if forecasting
+- Mock premium checkout and cancellation flows for demo and local testing
+- Admin tools for analytics, billing visibility, system health, and user management
 
 ## Tech Stack
 
@@ -19,6 +27,13 @@ The project includes:
 - Stripe integration with mock mode support
 - OpenAI Python SDK for AI features
 - Playwright for end-to-end smoke tests
+
+## Architecture Notes
+
+- `core/` contains the main product logic: models, views, forms, services, tasks, and tests
+- `config/` holds Django settings, URL routing, and deployment configuration
+- `templates/` and `static/` provide the server-rendered frontend
+- `e2e/` contains Playwright smoke coverage for key user journeys
 
 ## Local Setup
 
@@ -86,7 +101,7 @@ Optional integrations:
 - `/settings/`
 - `/admin/hub/`
 
-## Billing Modes
+## Demo Notes
 
 With `BILLING_MOCK_MODE=1`:
 
@@ -105,27 +120,28 @@ To use live Stripe, set `BILLING_MOCK_MODE=0` and provide the Stripe keys and pr
 
 ## Testing
 
-Run the Django test suite:
+Backend test suite:
 
 ```powershell
 $env:DJANGO_SECRET_KEY='dev-secret-key'
 $env:DATABASE_URL='sqlite:///db.sqlite3'
 $env:DJANGO_DEBUG='true'
+python manage.py check
 python manage.py test
 ```
 
-Run Playwright smoke tests:
+Playwright smoke tests:
 
 ```powershell
 npm install
 npm run test:e2e
 ```
 
-The Playwright config boots Django on `http://127.0.0.1:8001` with mock billing and SQLite.
+The Playwright config boots Django on `http://127.0.0.1:8001` with mock billing and a local SQLite database. Session state used by the tests is generated automatically during `globalSetup`.
 
 ## Deployment
 
-Production deployment guidance lives in [DEPLOYMENT.md](/c:/Users/LPLOO/Documents/CV%20Projects/PredictMyGrade-main/DEPLOYMENT.md).
+Production deployment guidance lives in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 In short:
 

@@ -1,7 +1,8 @@
 const { defineConfig, devices } = require('@playwright/test');
+const path = require('node:path');
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8001';
-const sqlitePath = 'c:/Users/LPLOO/Documents/CV Projects/PredictMyGrade-main/db.sqlite3';
+const sqlitePath = path.resolve(__dirname, 'db.sqlite3').replace(/\\/g, '/');
 
 module.exports = defineConfig({
   testDir: './e2e',

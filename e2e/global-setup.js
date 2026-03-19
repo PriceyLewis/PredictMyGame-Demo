@@ -7,7 +7,8 @@ const storageStatePath = path.join(__dirname, '.auth', 'user.json');
 const freeStorageStatePath = path.join(__dirname, '.auth', 'free-user.json');
 const upgradeStorageStatePath = path.join(__dirname, '.auth', 'upgrade-user.json');
 const adminStorageStatePath = path.join(__dirname, '.auth', 'admin-user.json');
-const sqliteUrl = 'sqlite:///c:/Users/LPLOO/Documents/CV Projects/PredictMyGrade-main/db.sqlite3';
+const sqlitePath = path.join(rootDir, 'db.sqlite3').replace(/\\/g, '/');
+const sqliteUrl = `sqlite:///${sqlitePath}`;
 
 function runDjangoScript(script) {
   return execFileSync(

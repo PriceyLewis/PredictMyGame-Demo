@@ -16,10 +16,24 @@ venv/
 # Django & local artifacts
 db.sqlite3
 config/.django_secret_key
+media/
+backups/
 
 # Static build outputs
 staticfiles/
+test-results/
+playwright-report/
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Node artifacts
+node_modules/
+e2e/.auth/
+
+# Local scratch files
+*.tmp
+*.bak
+__temp_patch.ps1
+temp_planner.txt
