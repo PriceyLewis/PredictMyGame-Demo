@@ -152,11 +152,6 @@ body { background: var(--bg); color: var(--text); }
       <div class="subtle">Logins in the past week</div>
     </div>
     <div class="card">
-      <h3>Trialing</h3>
-      <div class="big" style="color:var(--warn)">{{ trial_active }}</div>
-      <div class="subtle">Expiring ≤14d: {{ trial_expiring_14 }}</div>
-    </div>
-    <div class="card">
       <h3>Modules tracked</h3>
       <div class="big">{{ modules_total }}</div>
       <div class="subtle">Across all levels</div>
@@ -213,12 +208,10 @@ body { background: var(--bg); color: var(--text); }
       <div class="counter-bar">
         <div class="progress-wrap">
           <div id="barPremium" class="progress-bar progress-premium"></div>
-          <div id="barTrial" class="progress-bar progress-trial"></div>
           <div id="barFree" class="progress-bar progress-free"></div>
         </div>
         <div class="counter-text">
           <div>Premium: <span id="countPremium">0</span></div>
-          <div>Trial: <span id="countTrial">0</span></div>
           <div>Free: <span id="countFree">0</span></div>
           <div>Total: <span id="countTotal">0</span></div>
         </div>
@@ -231,25 +224,21 @@ body { background: var(--bg); color: var(--text); }
         <div class="filter-group">
           <button class="filter-btn {% if plan_filter == 'all' %}active{% endif %}" data-filter="all" type="button">All</button>
           <button class="filter-btn {% if plan_filter == 'premium' %}active{% endif %}" data-filter="premium" type="button">Premium</button>
-          <button class="filter-btn {% if plan_filter == 'trial' %}active{% endif %}" data-filter="trial" type="button">Trial</button>
           <button class="filter-btn {% if plan_filter == 'free' %}active{% endif %}" data-filter="free" type="button">Free</button>
         </div>
       </div>
 
       <ul class="list-group" id="userList">
         {% for u in users %}
-          <li class="list-group-item" data-type="{% if u.userprofile.is_premium %}premium{% elif u.userprofile.trial_started_at and u.userprofile.trial_ends_at and not u.userprofile.trial_cancelled and u.userprofile.trial_ends_at >= now %}trial{% else %}free{% endif %}">
+          <li class="list-group-item" data-type="{% if u.profile.is_premium %}premium{% else %}free{% endif %}">
             <div>
               <strong>{{ u.get_full_name|default:u.username }}</strong>
               <div class="subtle">@{{ u.username }}{% if u.email %} • {{ u.email }}{% endif %}</div>
-              {% if u.userprofile.is_premium %}
+              {% if u.profile.is_premium %}
                 <span class="badge bg-success">Premium</span>
-                {% if u.userprofile.premium_since %}
-                  <small class="subtle">since {{ u.userprofile.premium_since|date:"d M Y" }}</small>
+                {% if u.profile.premium_since %}
+                  <small class="subtle">since {{ u.profile.premium_since|date:"d M Y" }}</small>
                 {% endif %}
-              {% elif u.userprofile.trial_started_at and u.userprofile.trial_ends_at and not u.userprofile.trial_cancelled and u.userprofile.trial_ends_at >= now %}
-                <span class="badge bg-warn">Trial</span>
-                <small class="subtle">ends {{ u.userprofile.trial_ends_at|date:"d M Y" }}</small>
               {% else %}
                 <span class="badge bg-secondary">Free</span>
               {% endif %}
@@ -258,7 +247,7 @@ body { background: var(--bg); color: var(--text); }
               <button type="button"
                       class="btn secondary btn-sm toggle-premium-btn"
                       data-toggle-url="{% url 'core:admin_toggle_premium' u.id %}">
-                {% if u.userprofile.is_premium %}Set free{% else %}Make premium{% endif %}
+                {% if u.profile.is_premium %}Set free{% else %}Make premium{% endif %}
               </button>
             </div>
           </li>
@@ -307,33 +296,27 @@ body { background: var(--bg); color: var(--text); }
   const userItems=document.querySelectorAll('#userList .list-group-item');
   const countPremium=document.getElementById('countPremium');
   const countFree=document.getElementById('countFree');
-  const countTrial=document.getElementById('countTrial');
   const countTotal=document.getElementById('countTotal');
   const barPremium=document.getElementById('barPremium');
   const barFree=document.getElementById('barFree');
-  const barTrial=document.getElementById('barTrial');
   const csrfInput=document.querySelector('#adminHubCsrf input[name="csrfmiddlewaretoken"]');
 
   function updateCounters(){
-    let premium=0,free=0,trial=0,total=0;
+    let premium=0,free=0,total=0;
     userItems.forEach(li=>{
       if(li.style.display!=='none'){
         total++;
         if(li.dataset.type==='premium'){premium++;}
-        else if(li.dataset.type==='trial'){trial++;}
         else {free++;}
       }
     });
     countPremium.textContent=premium;
     countFree.textContent=free;
-    countTrial.textContent=trial;
     countTotal.textContent=total;
 
     const percentPrem=total? (premium/total)*100 : 0;
-    const percentTrial=total? (trial/total)*100 : 0;
     barPremium.style.width=percentPrem+'%';
-    barTrial.style.width=percentTrial+'%';
-    barFree.style.width=(100 - percentPrem - percentTrial)+'%';
+    barFree.style.width=(100 - percentPrem)+'%';
   }
 
   function filterUsers(){

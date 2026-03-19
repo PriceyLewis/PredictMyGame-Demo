@@ -13,8 +13,7 @@ class CeleryTaskTests(TestCase):
         self.premium_user = User.objects.create_user("premium-task", "p@example.com", "pass123")
         self.premium_user.profile.set_premium(True)
 
-        self.trial_user = User.objects.create_user("trial-task", "t@example.com", "pass123")
-        # Trial is active by default via the profile signal.
+        self.mock_free_user = User.objects.create_user("mock-free-task", "t@example.com", "pass123")
 
         self.free_user = User.objects.create_user("free-task", "f@example.com", "pass123")
         free_profile = self.free_user.profile
@@ -42,14 +41,14 @@ class CeleryTaskTests(TestCase):
         mock_command.assert_called_once_with("send_weekly_report")
 
     @mock.patch("core.tasks.generate_insights_for_user", return_value=["insight"])
-    def test_generate_weekly_ai_insights_targets_premium_and_trial(
+    def test_generate_weekly_ai_insights_targets_only_premium_users(
         self, mock_generate_insights
     ):
         tasks.generate_weekly_ai_insights()
         called_profiles = [call.args[0] for call in mock_generate_insights.call_args_list]
         user_ids = {profile.user_id for profile in called_profiles}
         self.assertIn(self.premium_user.id, user_ids)
-        self.assertIn(self.trial_user.id, user_ids)
+        self.assertNotIn(self.mock_free_user.id, user_ids)
         self.assertNotIn(self.free_user.id, user_ids)
 
     @mock.patch("core.tasks.capture_prediction_snapshot")
@@ -59,7 +58,7 @@ class CeleryTaskTests(TestCase):
         def side_effect(profile):
             if profile.user == self.premium_user:
                 return object()
-            if profile.user == self.trial_user:
+            if profile.user == self.mock_free_user:
                 raise RuntimeError("boom")
             return None
 

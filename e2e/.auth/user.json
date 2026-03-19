@@ -1,0 +1,14 @@
+{
+  "cookies": [
+    {
+      "name": "sessionid",
+      "value": "2e8b9trsu5sii4i0fxn64rfq50y0yf4l",
+      "domain": "127.0.0.1",
+      "path": "/",
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

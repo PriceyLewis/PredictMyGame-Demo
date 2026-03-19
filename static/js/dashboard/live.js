@@ -17,6 +17,7 @@ export default function initLive(boot, { assistant, insights, goals } = {}) {
 
   const urls = boot.urls || {};
   const paletteCommands = Array.isArray(boot.commands) ? boot.commands : [];
+  const AI_MOOD_CIRCUMFERENCE = 2 * Math.PI * 45;
 
   const assistantModule = assistant || { updateLive: () => {} };
   const insightsModule = insights || { updateLive: () => {} };
@@ -1332,8 +1333,6 @@ export default function initLive(boot, { assistant, insights, goals } = {}) {
     }
   }
 
-  const AI_MOOD_CIRCUMFERENCE = 2 * Math.PI * 45;
-
   function updateMoodIndicator(confidence, bandLabel) {
     const moodValue = Number(confidence);
     const clamped = Number.isFinite(moodValue) ? Math.max(0, Math.min(100, moodValue)) : 0;
@@ -1610,7 +1609,6 @@ export default function initLive(boot, { assistant, insights, goals } = {}) {
   }
 
 }
-
 
 
 

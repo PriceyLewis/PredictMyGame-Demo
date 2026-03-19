@@ -1,6 +1,6 @@
 # Deployment & Security Checklist
 
-This project now ships with sane defaults for public hosting (secure cookies, CSP, WhiteNoise, logging). Use this guide as a run-book when deploying to a production host (e.g. DigitalOcean, Railway, Fly.io, Render, Heroku, Azure, etc.).
+This project ships with production-oriented defaults for public hosting, including secure cookies, WhiteNoise static serving, and environment-based configuration. Use this guide as a deployment run-book for platforms such as Render, Railway, Fly.io, Heroku, Azure, or DigitalOcean.
 
 ## 1. Environment configuration
 
@@ -10,16 +10,16 @@ This project now ships with sane defaults for public hosting (secure cookies, CS
 | `DJANGO_SECRET_KEY=<strong random>` | Required to protect sessions. |
 | `DJANGO_ALLOWED_HOSTS=predictmygrade.com` | Comma separated hostnames that may serve the site (add platform domains or staging as needed). |
 | `DJANGO_CSRF_TRUSTED_ORIGINS=https://predictmygrade.com` | Matches HTTPS origins for CSRF protection; include any additional domains you deploy. |
-| `DATABASE_URL=postgres://...` | PostgreSQL connection string; the project now refuses to start without it so there is no SQLite fallback. |
+| `DATABASE_URL=postgres://...` | Database connection string. Use PostgreSQL in production. SQLite is still accepted by the current settings for local/dev or test environments. |
 | `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` | Redis/CloudAMQP connection strings if Celery workers are used. |
 | `EMAIL_*` | SMTP credentials for sending transactional mail. |
 | `STRIPE_*` | Your live Stripe keys before charging customers. |
 | `OPENAI_API_KEY` | Only if AI features are required in production. |
 | `PREMIUM_BACKUP_DIR` | Optional path that tells `run_premium_backup` where to persist premium/trial CSV exports (defaults to `backups/` in the repo). |
 
-WhiteNoise is now enabled, so collect static assets (`python manage.py collectstatic --noinput`) and keep `STATICFILES_STORAGE=whitenoise.storage.CompressedManifestStaticFilesStorage` in sync with this repo before bundling assets for Render.
+WhiteNoise is enabled, so collect static assets (`python manage.py collectstatic --noinput`) and keep `STATICFILES_STORAGE=whitenoise.storage.CompressedManifestStaticFilesStorage` in sync with this repo before bundling assets for deployment.
 
-Focus on a live PostgreSQL database for every environment. `db.sqlite3` no longer ships with the repo and the settings guard against falling back to SQLite.
+For hosted environments, use a managed PostgreSQL database. SQLite remains suitable for local development and some test workflows, but it is not the right choice for production concurrency, backups, or platform portability.
 
 Optional overrides are documented inline in `config/settings.py` (e.g. cookie policies, CSP, logging verbosity).
 
@@ -32,13 +32,13 @@ python manage.py migrate
 python manage.py createsuperuser  # once, for admin access
 ```
 
-When targeting Render (or another host that runs a single shell command), combine the steps so `pip` only sees its options. For example:
+When targeting Render (or another host that runs a single shell command), combine the steps so `pip` only sees its own options. For example:
 
 ```bash
 pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py createsuperuser
 ```
 
-If you run Celery tasks, provision at least one worker (`celery -A config worker -l info`) and, if you rely on the beat schedule defined in settings, a beat process (`celery -A config beat -l info`).
+Celery settings are currently commented out in `config/settings.py`. If you re-enable background tasks, provision at least one worker (`celery -A config worker -l info`) and, if needed, a beat process (`celery -A config beat -l info`).
 
 ## 3. Application server
 
@@ -62,7 +62,7 @@ Terminate TLS in a reverse proxy (Nginx, Caddy, Traefik, platform load balancer)
 - [x] `python manage.py check --deploy` passes.
 - [x] Monitoring in place (e.g. health checks, Sentry/Rollbar, server metrics).
 - [x] Log retention configured (logs now emit structured lines and mail admins on 500s).
-- [x] HTTP response headers include a strong Content-Security-Policy (e.g. `Content-Security-Policy: default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline';`).
+- [x] Security headers and HTTPS behaviour have been reviewed for the deployment target.
 
 ## 5. Backups & monitoring
 

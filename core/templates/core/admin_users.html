@@ -1,8 +1,26 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}User Management{% endblock %}
+{% block body_attrs %}class="page-admin-users"{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/levels.css' %}">
+<style>
+  .page-admin-users .site-nav {
+    position: static;
+  }
+
+  .page-admin-users .card:hover {
+    transform: none;
+  }
+
+  .page-admin-users .cookie-banner {
+    position: static;
+    inset: auto;
+    transform: none;
+    width: auto;
+    margin: 1rem;
+  }
+</style>
 {% endblock %}
 {% block content %}
 <div class="level-dashboard">
@@ -19,7 +37,7 @@
 
   <div class="level-toolbar">
     <div class="toolbar-meta">
-      Total users: {{ total_users }} &bull; Premium: {{ premium_percentage }}% &bull; Trials: {{ trial_percentage }}%
+      Total users: {{ total_users }} &bull; Premium: {{ premium_percentage }}% &bull; Free: {{ free_percentage }}%
     </div>
     <div class="level-actions">
       <a class="level-btn" href="{% url 'core:admin_analytics' %}">Analytics</a>
@@ -41,11 +59,6 @@
       <h3>Premium</h3>
       <div class="big-number">{{ premium_users }}</div>
       <p class="muted">{{ premium_percentage }}% of user base</p>
-    </div>
-    <div class="card">
-      <h3>Active trials</h3>
-      <div class="big-number">{{ trialing_users }}</div>
-      <p class="muted">{{ trial_percentage }}% of user base</p>
     </div>
     <div class="card">
       <h3>Free plan</h3>
@@ -82,7 +95,6 @@
         <select id="planFilter" name="plan">
           <option value="all" {% if plan_filter == "all" %}selected{% endif %}>All plans</option>
           <option value="premium" {% if plan_filter == "premium" %}selected{% endif %}>Premium</option>
-          <option value="trial" {% if plan_filter == "trial" %}selected{% endif %}>Active trial</option>
           <option value="free" {% if plan_filter == "free" %}selected{% endif %}>Free</option>
         </select>
       </div>
@@ -108,15 +120,12 @@
               <span class="muted small">@{{ profile.user.username }}</span>
             </td>
             <td class="muted small">{{ profile.user.email|default:"--" }}</td>
-            <td>
+            <td class="user-plan-cell">
               {% if profile.is_premium %}
                 <span class="badge-premium">Premium</span>
                 {% if profile.premium_since %}
-                  <div class="muted small">since {{ profile.premium_since|date:"d M Y" }}</div>
+                  <div class="muted small user-plan-since">since {{ profile.premium_since|date:"d M Y" }}</div>
                 {% endif %}
-              {% elif profile.trial_started_at and profile.trial_ends_at and not profile.trial_cancelled and profile.trial_ends_at >= now %}
-                <span class="badge-free">Trial</span>
-                <div class="muted small">ends {{ profile.trial_ends_at|date:"d M Y" }}</div>
               {% else %}
                 <span class="badge-free">Free</span>
               {% endif %}
@@ -132,6 +141,7 @@
             <td>
               <button type="button"
                       class="btn secondary toggle-premium-btn"
+                      data-username="{{ profile.user.username }}"
                       data-toggle-url="{% url 'core:admin_toggle_premium' profile.user.id %}">
                 {% if profile.is_premium %}Set free{% else %}Make premium{% endif %}
               </button>
@@ -160,11 +170,9 @@
             <strong>{{ user.get_full_name|default:user.username }}</strong><br>
             <span class="muted small">{{ user.date_joined|date:"d M Y H:i" }}</span>
           </div>
-          {% with profile=user.userprofile %}
+          {% with profile=user.profile %}
             {% if profile.is_premium %}
               <span class="badge-premium">Premium</span>
-            {% elif profile.trial_started_at and profile.trial_ends_at and not profile.trial_cancelled and profile.trial_ends_at >= now %}
-              <span class="badge-free">Trial</span>
             {% else %}
               <span class="badge-free">Free</span>
             {% endif %}
@@ -234,11 +242,22 @@
 
   const form = document.getElementById('userActionsForm');
   const csrfToken = form ? form.querySelector('[name=\"csrfmiddlewaretoken\"]').value : null;
+  const formatDate = (value) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
   document.querySelectorAll('.toggle-premium-btn').forEach((button) => {
     button.addEventListener('click', async () => {
       const endpoint = button.dataset.toggleUrl;
       if (!endpoint || !csrfToken) return;
       const originalText = button.textContent;
+      const row = button.closest('tr');
       button.disabled = true;
       button.textContent = 'Updating...';
       try {
@@ -253,7 +272,18 @@
         if (!response.ok || !data.ok) {
           throw new Error(data.error || 'Unable to update membership.');
         }
-        window.location.reload();
+        const planCell = row ? row.querySelector('.user-plan-cell') : null;
+        if (planCell) {
+          const badgeClass = data.is_premium ? 'badge-premium' : 'badge-free';
+          const badgeLabel = data.is_premium ? 'Premium' : 'Free';
+          const sinceMarkup =
+            data.is_premium && data.premium_since
+              ? `<div class="muted small user-plan-since">since ${formatDate(data.premium_since)}</div>`
+              : '';
+          planCell.innerHTML = `<span class="${badgeClass}">${badgeLabel}</span>${sinceMarkup}`;
+        }
+        button.textContent = data.is_premium ? 'Set free' : 'Make premium';
+        button.disabled = false;
       } catch (error) {
         alert(error.message);
         button.disabled = false;

@@ -1167,15 +1167,12 @@ def admin_hub(request):
     recent_users = User.objects.filter(date_joined__date__gte=signup_start).count()
     active_last_7 = UserProfile.objects.filter(user__last_login__gte=now - timedelta(days=7)).count()
 
-    trial_active = 0
-    trial_expiring_14 = 0
-
     metrics = _collect_admin_metrics()
     health = _collect_system_health_metrics()
 
     search_query = request.GET.get("q", "").strip()
     plan_filter = request.GET.get("plan", "all")
-    users_qs = User.objects.select_related("userprofile")
+    users_qs = User.objects.select_related("profile")
     if search_query:
         users_qs = users_qs.filter(
             Q(username__icontains=search_query)
@@ -1184,18 +1181,9 @@ def admin_hub(request):
             | Q(last_name__icontains=search_query)
         )
     if plan_filter == "premium":
-        users_qs = users_qs.filter(userprofile__is_premium=True)
-    elif plan_filter == "trial":
-        users_qs = users_qs.filter(userprofile__is_premium=False)
+        users_qs = users_qs.filter(profile__is_premium=True)
     elif plan_filter == "free":
-        users_qs = users_qs.filter(
-            Q(userprofile__is_premium=False)
-            & (
-                Q(userprofile__trial_started_at__isnull=True)
-                | Q(userprofile__trial_cancelled=True)
-                | Q(userprofile__trial_ends_at__lt=now)
-            )
-        )
+        users_qs = users_qs.filter(profile__is_premium=False)
 
     user_limit = 120
     users = list(users_qs.order_by("username")[:user_limit])
@@ -1208,8 +1196,6 @@ def admin_hub(request):
         "recent_users": recent_users,
         "active_last_7": active_last_7,
         "now": now,
-        "trial_active": trial_active,
-        "trial_expiring_14": trial_expiring_14,
         "plan_filter": plan_filter,
         "search_query": search_query,
         "users": users,
@@ -1336,8 +1322,6 @@ def admin_user_management(request):
         )
     if plan_filter == "premium":
         filtered_profiles = filtered_profiles.filter(is_premium=True)
-    elif plan_filter == "trial":
-        filtered_profiles = filtered_profiles.filter(is_premium=False)
     elif plan_filter == "free":
         filtered_profiles = filtered_profiles.filter(is_premium=False)
 
@@ -3303,8 +3287,6 @@ def dashboard_live_data(request):
     timeline_events_payload = [_serialize_timeline_event(event) for event in timeline_events]
     goals_summary = _goal_summary(StudyGoal.objects.filter(user=request.user))
 
-    has_access = resolve_premium_status(request.user, profile=profile)["has_access"]
-
     payload = {
         "avg": round(avg, 2),
         "average_grade": round(average_grade, 2),
@@ -3326,25 +3308,15 @@ def dashboard_live_data(request):
             for plan in calendar_items
         ],
     }
-    if has_access:
-        payload.update(
-            {
-                "ai_predicted_average": predicted_avg,
-                "ai_confidence": predicted_confidence,
-                "ai_model": predicted_model,
-                "ai_personal_weight": prediction.personal_weight,
-                "ai_insights": insights_payload,
-            }
-        )
-    else:
-        payload.update(
-            {
-                "ai_predicted_average": None,
-                "ai_confidence": None,
-                "ai_model": None,
-                "ai_personal_weight": None,
-            }
-        )
+    payload.update(
+        {
+            "ai_predicted_average": predicted_avg,
+            "ai_confidence": predicted_confidence,
+            "ai_model": predicted_model,
+            "ai_personal_weight": prediction.personal_weight,
+            "ai_insights": insights_payload,
+        }
+    )
     payload["goal_summary"] = goals_summary
     return JsonResponse(payload)
 
@@ -5188,12 +5160,16 @@ def modules_list(request):
 @login_required
 @require_POST
 def module_add(request):
+    is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
     name = (request.POST.get("name") or "").strip()
     level = request.POST.get("level") or "UNI"
     credits_raw = request.POST.get("credits")
     try:
         credits = int(float(credits_raw or 0))
     except (TypeError, ValueError):
+        if not is_ajax:
+            messages.error(request, "Credits must be a whole number between 0 and 100.")
+            return redirect("core:modules_list")
         return JsonResponse(
             {"ok": False, "error": "Credits must be a whole number between 0 and 100."},
             status=400,
@@ -5205,6 +5181,9 @@ def module_add(request):
         try:
             grade_percent = float(grade_percent_raw)
         except (TypeError, ValueError):
+            if not is_ajax:
+                messages.error(request, "Grade must be a number between 0 and 100.")
+                return redirect("core:modules_list")
             return JsonResponse(
                 {"ok": False, "error": "Grade must be a number between 0 and 100."},
                 status=400,
@@ -5219,6 +5198,9 @@ def module_add(request):
             grade_percent=grade_percent,
         )
     except IntegrityError:
+        if not is_ajax:
+            messages.error(request, "You already have a module with this name at this level.")
+            return redirect("core:modules_list")
         return JsonResponse(
             {
                 "ok": False,
@@ -5228,6 +5210,8 @@ def module_add(request):
         )
     _record_timeline_event(request.user, "module_added", f"Added module {module.name}.")
     messages.success(request, "Module added.")
+    if not is_ajax:
+        return redirect("core:modules_list")
     return JsonResponse(
         {
             "ok": True,
@@ -5293,10 +5277,14 @@ def module_update(request, pk: int):
 @login_required
 @require_POST
 def module_delete(request, pk: int):
+    is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
     module = get_object_or_404(Module, pk=pk, user=request.user)
     module_name = module.name
     module.delete()
     _record_timeline_event(request.user, "module_removed", f"Removed module {module_name}.")
+    messages.success(request, f"Removed module {module_name}.")
+    if not is_ajax:
+        return redirect("core:modules_list")
     return JsonResponse({"ok": True, "removed": pk, "name": module_name})
 
 
@@ -5451,8 +5439,10 @@ def import_user_data(request):
     return JsonResponse({"ok": True, "created": created})
 
 
-@premium_required
 def export_study_plan_calendar(request):
+    profile = get_profile(request.user)
+    if not resolve_premium_status(request.user, profile=profile)["has_access"]:
+        return HttpResponse("Upgrade to Premium to unlock this feature.", status=403)
 
     base_path = reverse("core:study_plan_calendar")
     absolute_url = request.build_absolute_uri(base_path)
@@ -6868,6 +6858,9 @@ def stripe_webhook(request):
             profile = _profile_for(customer_id=customer_id)
             if profile and cancel_at_period_end and period_end:
                 remaining_days = _days_until_epoch(period_end)
+                if remaining_days is not None and remaining_days <= 0:
+                    deactivate_by_customer(customer_id)
+                    return JsonResponse({"received": True})
                 _send_billing_email(
                     profile,
                     "Your PredictMyGrade subscription will end soon",

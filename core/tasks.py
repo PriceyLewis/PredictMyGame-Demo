@@ -49,6 +49,7 @@ def weekly_retrain_models() -> None:
 def generate_weekly_ai_insights() -> None:
     """
     Generate AI insights for premium users and persist them for dashboard consumption.
+    Mock/free accounts are intentionally excluded.
     """
     profiles = UserProfile.objects.filter(is_premium=True).select_related("user").iterator()
     total_insights = 0

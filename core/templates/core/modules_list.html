@@ -200,7 +200,7 @@
     try {
       const res = await fetch(form.action, {
         method: 'POST',
-        headers: { 'X-CSRFToken': getCSRF() },
+        headers: { 'X-CSRFToken': getCSRF(), 'X-Requested-With': 'XMLHttpRequest' },
         body: data
       });
       const out = await res.json();
@@ -265,7 +265,7 @@
     try {
       const response = await fetch(form.action, {
         method: 'POST',
-        headers: { 'X-CSRFToken': getCSRF() },
+        headers: { 'X-CSRFToken': getCSRF(), 'X-Requested-With': 'XMLHttpRequest' },
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data.ok === false) {
