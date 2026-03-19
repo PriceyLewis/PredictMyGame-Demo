@@ -145,7 +145,6 @@ urlpatterns = [
     path("upgrade/create-session/", views.create_checkout_session, name="create_checkout_session_default"),
     path("create-checkout-session/<str:plan_type>/", views.create_checkout_session, name="create_checkout_session"),
     path("create-portal-session/", views.create_portal_session, name="create_portal_session"),
-    path("webhook/", views.stripe_webhook, name="stripe_webhook"),
 ]
 
 
@@ -160,6 +159,7 @@ STATIC_PAGES = {
     "how-it-works/": ("how_it_works", "core/how_it_works.html"),
     "welcome-tour/": ("welcome_tour", "core/welcome_tour.html"),
     "what-if/basic/": ("what_if_basic", "core/what_if_basic.html"),
+    "demo-notice/": ("demo_notice", "core/demo_notice.html"),
     "privacy/": ("privacy_policy", "core/privacy_policy.html"),
     "privacy-policy/": ("privacy_policy_alias", "core/privacy_policy.html"),
     "terms/": ("terms_of_service", "core/terms_of_service.html"),

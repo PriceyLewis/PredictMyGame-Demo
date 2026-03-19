@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Demo Notice{% endblock %}
+{% block content %}
+<section class="legal-page">
+  <header class="legal-hero">
+    <h1>Demo Notice</h1>
+    <p>Last updated: {% now "j F Y" %}</p>
+    <p>PredictMyGrade is a portfolio/demo build. It is intended for local review and product demonstration, not as a live commercial or compliance-ready service.</p>
+  </header>
+
+  <article class="legal-card">
+    <h2>What Is Mocked</h2>
+    <ul>
+      <li>Billing and subscription flows are simulated.</li>
+      <li>Predictions, assistant outputs, and premium journeys are demonstration features.</li>
+      <li>Cookie, privacy, and legal-style UI pages exist as portfolio content, not audited production controls.</li>
+    </ul>
+  </article>
+
+  <article class="legal-card">
+    <h2>What Is Real In The Repo</h2>
+    <ul>
+      <li>The app uses real Django routing, templates, authentication, and database persistence for local testing.</li>
+      <li>Export and deletion flows operate on locally stored demo data.</li>
+      <li>Optional AI requests can call external APIs only if a reviewer explicitly configures them.</li>
+    </ul>
+  </article>
+
+  <article class="legal-card">
+    <h2>How To Review Safely</h2>
+    <ul>
+      <li>Use throwaway/demo data only.</li>
+      <li>Do not treat this repository as a launched service.</li>
+      <li>Replace all placeholder legal/policy content before any real deployment.</li>
+    </ul>
+  </article>
+
+  <article class="legal-card">
+    <h2>Reference Pages</h2>
+    <p>If needed, the detailed placeholder pages remain available for portfolio context:</p>
+    <ul>
+      <li><a href="{% url 'core:privacy_policy' %}">Privacy Policy</a></li>
+      <li><a href="{% url 'core:terms_of_service' %}">Terms of Service</a></li>
+      <li><a href="{% url 'core:cookie_notice' %}">Cookie Notice</a></li>
+      <li><a href="{% url 'core:prediction_disclaimer' %}">Prediction Disclaimer</a></li>
+    </ul>
+  </article>
+</section>
+{% endblock %}

@@ -1,21 +1,28 @@
 # PredictMyGrade
 
-PredictMyGrade is a full-stack Django product mockup for student progress tracking, grade forecasting, study planning, and premium feature upsell flows. It was built as a portfolio project to demonstrate shipping a feature-rich web application with product thinking, backend logic, test coverage, and deployment-ready configuration.
+PredictMyGrade is a portfolio Django product mockup for student progress tracking, grade forecasting, study planning, and premium upsell journeys. It is intended for demonstration and local review only, not as a live student service or production SaaS.
+
+## Mock-Only Status
+
+- This repository should be treated as a demo/portfolio build.
+- Billing and subscription flows are simulated only.
+- The app contains real Django plumbing such as authentication, database persistence, and optional integration hooks, but those exist to support the mock product experience locally.
+- Nothing in this repository should be presented as a live commercial, legal, or compliance-ready platform without further work.
 
 ## What This Project Demonstrates
 
 - End-to-end product design rather than a single isolated feature
 - Django application architecture with authentication, admin tooling, services, and background-task hooks
-- AI-assisted features with safe fallback behaviour when no API key is configured
+- AI-assisted demo flows with safe fallback behaviour when no API key is configured
 - Premium feature gating and mock billing flows suitable for demos and local review
 - Automated testing across backend and browser-level smoke flows
 
 ## Core Features
 
-- Student dashboard with weighted averages, progress summaries, and AI prediction metrics
+- Student dashboard with weighted averages, progress summaries, and prediction-style demo metrics
 - Module management for university and GCSE-style workflows
 - Study planning tools, goals, deadlines, snapshots, and calendar export
-- AI-powered reporting, mentor chat, planning helpers, and what-if forecasting
+- AI-assisted reporting, mentor chat, planning helpers, and what-if forecasting demos
 - Mock premium checkout and cancellation flows for demo and local testing
 - Admin tools for analytics, billing visibility, system health, and user management
 
@@ -23,9 +30,9 @@ PredictMyGrade is a full-stack Django product mockup for student progress tracki
 
 - Python / Django 5
 - SQLite for local development, PostgreSQL-ready via `DATABASE_URL`
-- django-allauth for authentication and social sign-in
-- Stripe integration with mock mode support
-- OpenAI Python SDK for AI features
+- django-allauth for local/demo authentication flows
+- Mock billing flow for demo-only premium upsell behaviour
+- OpenAI Python SDK for optional local AI integration
 - Playwright for end-to-end smoke tests
 
 ## Architecture Notes
@@ -79,11 +86,6 @@ Useful local defaults:
 
 Optional integrations:
 
-- `STRIPE_PUBLIC_KEY`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_PRICE_ID_MONTHLY`
-- `STRIPE_PRICE_ID_YEARLY`
-- `STRIPE_WEBHOOK_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 - `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`
@@ -103,20 +105,22 @@ Optional integrations:
 
 ## Demo Notes
 
-With `BILLING_MOCK_MODE=1`:
+This repository is mock-first:
 
-- checkout is simulated locally
+- billing and checkout are simulated locally
 - no real payment method is collected
-- `/payment/success/` upgrades the signed-in user in-app
+- `/payment/success/` upgrades the signed-in user in-app for demo purposes
 - `/billing/cancel/` cancels the mock subscription
-
-To use live Stripe, set `BILLING_MOCK_MODE=0` and provide the Stripe keys and price IDs listed above.
+- authentication and saved records exist for local testing and portfolio walkthroughs
+- optional AI behaviour can call OpenAI if `OPENAI_API_KEY` is configured, but otherwise falls back to preview/demo behaviour
+- legal and privacy pages should be treated as placeholder portfolio content unless reviewed and replaced for a real launch
 
 ## AI Behavior
 
-- AI features use `OPENAI_API_KEY` when available.
+- AI features use `OPENAI_API_KEY` only when you explicitly configure it.
 - Some premium assistant and forecast flows fall back to non-live or preview behaviour when no API key is configured.
 - Free users still have limited preview behaviour in parts of the assistant flow.
+- If you want the project to remain strictly mock-only, leave `OPENAI_API_KEY` blank.
 
 ## Testing
 

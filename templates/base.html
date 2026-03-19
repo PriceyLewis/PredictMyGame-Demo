@@ -161,10 +161,7 @@
   <footer class="site-footer">
     <div>&copy; {% now "Y" %} PredictMyGrade &middot; see your future. Shape your future.</div>
     <nav class="site-footer__links" aria-label="Legal links">
-      <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>
-      <a href="{% url 'core:terms_of_service' %}">Terms of Service</a>
-      <a href="{% url 'core:cookie_notice' %}">Cookie Notice</a>
-      <a href="{% url 'core:prediction_disclaimer' %}">Prediction Disclaimer</a>
+      <a href="{% url 'core:demo_notice' %}">Demo Notice</a>
       {% if request.user.is_authenticated %}
       <a href="{% url 'core:download_personal_data' %}">Download My Data</a>
       <a href="{% url 'core:delete_account' %}">Delete Account</a>
@@ -172,7 +169,7 @@
       <button type="button" data-cookie-open>Cookie preferences</button>
     </nav>
     <div class="site-footer__support">
-      Need help? Email <a href="mailto:support@predictmygrade.com">support@predictmygrade.com</a>
+      Demo project support and feedback are handled through the in-app forms.
     </div>
     <p class="site-footer__disclaimer" role="note">
       Predictions are estimates based on your inputs and not guaranteed.
@@ -181,8 +178,8 @@
 
   <section class="cookie-banner" data-cookie-banner hidden aria-live="polite">
     <div class="cookie-banner__text">
-      This site uses cookies for login and analytics purposes.
-      <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>
+      This demo uses cookies for login and optional analytics preferences.
+      <a href="{% url 'core:demo_notice' %}">Demo Notice</a>
     </div>
     <div class="cookie-banner__actions">
       <button type="button" class="btn ghost" data-cookie-decline>Only essential</button>
@@ -197,7 +194,7 @@
         <h2>Cookie preferences</h2>
         <button type="button" class="btn ghost" data-cookie-close aria-label="Close">&times;</button>
       </div>
-      <p>Essential cookies keep PredictMyGrade secure and cannot be disabled. You can choose whether to enable anonymous analytics cookies.</p>
+      <p>Essential cookies are required for login and basic app behaviour. You can choose whether to enable anonymous analytics cookies.</p>
       <div class="cookie-modal__controls">
         <label class="cookie-toggle">
           <input type="checkbox" data-cookie-analytics>

@@ -46,7 +46,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
-        "DJANGO_ALLOWED_HOSTS", "predictmygrade.onrender.com"
+        "DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost,testserver"
     ).split(",")
     if host.strip()
 ]
@@ -213,7 +213,7 @@ PREMIUM_BACKUP_DIR = Path(os.getenv("PREMIUM_BACKUP_DIR", BASE_DIR / "backups"))
 # CSRF / sessions
 # ---------------------------------------------------------------------------
 _raw_csrf_origins = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "")
-DEFAULT_CSRF_TRUSTED_ORIGINS = ["https://predictmygrade.onrender.com", "https://predictmygrade.com",]
+DEFAULT_CSRF_TRUSTED_ORIGINS = []
 CSRF_TRUSTED_ORIGINS = [
     origin.rstrip("/")
     for origin in _raw_csrf_origins.split(",")
@@ -291,7 +291,7 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "EduSight <no-reply@example.com>")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "PredictMyGrade Demo <no-reply@example.com>")
 
 
 # ---------------------------------------------------------------------------
@@ -353,15 +353,10 @@ CACHES = {
 
 
 # ---------------------------------------------------------------------------
-# Stripe
+# Billing demo mode
 # ---------------------------------------------------------------------------
-STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY", "")
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_PRICE_ID_MONTHLY = os.getenv("STRIPE_PRICE_ID_MONTHLY", "")
-STRIPE_PRICE_ID_YEARLY = os.getenv("STRIPE_PRICE_ID_YEARLY", "")
 UPGRADE_PROMO_CODE = os.getenv("UPGRADE_PROMO_CODE", "EDUSTUDENT20")
-BILLING_MOCK_MODE = os.getenv("BILLING_MOCK_MODE", "1").lower() not in {"0", "false", "no"}
+BILLING_MOCK_MODE = True
 
 
 # ---------------------------------------------------------------------------

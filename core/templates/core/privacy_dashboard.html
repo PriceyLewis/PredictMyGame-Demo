@@ -4,7 +4,7 @@
 <section class="privacy-dashboard">
   <div class="privacy-hero">
     <h1>Privacy dashboard</h1>
-    <p class="muted">Manage cookie preferences, download your data, or request deletion at any time.</p>
+    <p class="muted">Review the demo privacy controls included in this portfolio build, including exports, deletion, and cookie preferences.</p>
   </div>
 
   <div class="privacy-grid">
@@ -26,36 +26,36 @@
 
     <article class="privacy-card">
       <h2>Cookie preferences</h2>
-      <p>Need to change your consent choices? Re-open the cookie banner and switch optional analytics on or off, or withdraw consent entirely.</p>
+      <p>Re-open the cookie banner to review the demo analytics preference controls used in this project.</p>
       <div class="privacy-actions">
         <button class="btn secondary" type="button" data-cookie-open>Adjust cookies</button>
-        <a class="btn ghost" href="{% url 'core:cookie_notice' %}">View cookie notice</a>
+        <a class="btn ghost" href="{% url 'core:demo_notice' %}">View demo notice</a>
       </div>
     </article>
 
     <article class="privacy-card">
       <h2>Delete account</h2>
-      <p>Deleting your account removes your profile, modules, AI chats, and study history. Backups are erased within 30 days. This action cannot be undone.</p>
+      <p>Deleting your account removes locally stored profile, module, AI chat, and study records for this demo environment. This action cannot be undone.</p>
       <div class="privacy-actions">
         <a class="btn danger" href="{% url 'core:delete_account' %}">Delete my account</a>
-        <a class="btn ghost" href="mailto:privacy@predictmygrade.com">Contact privacy team</a>
+        <a class="btn ghost" href="{% url 'core:demo_notice' %}">View demo notice</a>
       </div>
     </article>
 
     <article class="privacy-card">
-      <h2>Parental consent &amp; special requests</h2>
-      <p>Users under 18 must provide parental or school consent before we store any personal data. You can upload consent evidence or withdraw previously granted consent at any time.</p>
+      <h2>Mock Legal Controls</h2>
+      <p>This dashboard showcases what a privacy/self-service area could look like in a fuller product. It does not itself establish live legal workflows, support SLAs, or verified compliance operations.</p>
       <div class="privacy-actions">
-        <a class="btn" href="mailto:privacy@predictmygrade.com">Email privacy team</a>
-        <a class="btn ghost" href="{% url 'core:privacy_policy' %}">Review privacy policy</a>
+        <a class="btn" href="{% url 'core:demo_notice' %}">Review demo notice</a>
+        <a class="btn ghost" href="{% url 'core:prediction_disclaimer' %}">Prediction note</a>
       </div>
-      <p class="muted small" style="margin-top:0.5rem;">We respond within 72 hours and will pause processing until consent is confirmed.</p>
+      <p class="muted small" style="margin-top:0.5rem;">Use throwaway data when testing these flows.</p>
     </article>
   </div>
 
   <article class="privacy-card">
     <h2>Request history</h2>
-    <p class="muted small">We keep an audit trail of exports and deletions for transparency.</p>
+    <p class="muted small">This section shows demo export and deletion records created inside the local app environment.</p>
     <div class="table-responsive">
       <table class="privacy-table">
         <thead>

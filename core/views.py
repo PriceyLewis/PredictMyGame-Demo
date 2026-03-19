@@ -22,7 +22,6 @@ import textwrap
 
 from urllib.parse import urlencode, quote
 
-import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -40,7 +39,6 @@ from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.html import strip_tags
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods
 from django.template.loader import render_to_string
 
@@ -104,7 +102,6 @@ from .utils import (
 )
 from .decorators import premium_required
 
-stripe.api_key = settings.STRIPE_SECRET_KEY or None
 User = get_user_model()
 logger = logging.getLogger(__name__)
 APP_START_TIME = timezone.now()
@@ -126,7 +123,7 @@ def get_profile(user) -> UserProfile:
 
 
 def _billing_live_enabled() -> bool:
-    return bool(stripe.api_key and not getattr(settings, "BILLING_MOCK_MODE", True))
+    return False
 
 
 def _billing_checkout_enabled() -> bool:
@@ -1749,25 +1746,19 @@ def dashboard(request):
             "We added a sample study plan so you can explore the dashboard. Replace anything tagged 'Sample' with your own data when you're ready.",
         )
     onboarding_cta = onboarding_seed.cta
-    subscription = None
-    if stripe.api_key and profile.stripe_customer_id:
-        subscription = _load_latest_subscription(profile, request=request)
     premium_status = resolve_premium_status(request.user, profile=profile)
     has_access = premium_status["has_access"]
     plan_type = premium_status["plan_type"]
     billing_plan_label = None
     billing_plan_interval = None
-    subscription_status = _subscription_status(subscription)
-    if subscription and subscription_status in {"active", "trialing"}:
-        plan = subscription.get("plan") or {}
-        interval = (plan.get("interval") or "").lower()
-        billing_plan_interval = interval or None
-        if interval == "month":
+    if has_access:
+        mock_plan_type = _mock_plan_type_for_profile(profile)
+        if mock_plan_type == "monthly":
             billing_plan_label = "Monthly Premium"
-        elif interval == "year":
+            billing_plan_interval = "month"
+        elif mock_plan_type == "yearly":
             billing_plan_label = "Yearly Premium"
-        else:
-            billing_plan_label = "Premium plan"
+            billing_plan_interval = "year"
     if not billing_plan_label and has_access:
         if premium_status["is_trial_active"]:
             billing_plan_label = "Trial access"
@@ -5026,7 +5017,7 @@ def submit_support_request(request):
         messages.error(request, "Please attach a screenshot so we can reproduce the bug.")
         return redirect("core:settings")
 
-    support_email = getattr(settings, "SUPPORT_EMAIL", "support@predictmygrade.com")
+    support_email = getattr(settings, "SUPPORT_EMAIL", "no-reply@example.com")
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", support_email)
     category_label = "Bug report" if category == "bug" else "Feedback"
 
@@ -5056,10 +5047,10 @@ def submit_support_request(request):
         logger.exception("Failed to send support email for user %s", request.user.id)
         messages.error(
             request,
-            "We couldn't send your message. Please try again in a moment or email support@predictmygrade.com directly.",
+            "We couldn't send your message. Please try again in a moment.",
         )
     else:
-        messages.success(request, "Thanks! Your message has been sent to the support team.")
+        messages.success(request, "Thanks! Your message has been submitted.")
 
     return redirect("core:settings")
 
@@ -5086,7 +5077,7 @@ def contact_support(request):
             messages.error(request, "Please provide both a subject and a message.")
             return render(request, "core/contact_support.html", context, status=400)
 
-        support_email = getattr(settings, "SUPPORT_EMAIL", "support@predictmygrade.com")
+        support_email = getattr(settings, "SUPPORT_EMAIL", "no-reply@example.com")
         from_email = getattr(settings, "DEFAULT_FROM_EMAIL", support_email)
 
         identifier = (
@@ -5118,7 +5109,7 @@ def contact_support(request):
             logger.exception("Failed to send contact support email")
             messages.error(
                 request,
-                "We couldn't send your message right now. Please try again in a moment or email support@predictmygrade.com directly.",
+                "We couldn't send your message right now. Please try again in a moment.",
             )
             return render(request, "core/contact_support.html", context, status=502)
 
@@ -6251,9 +6242,6 @@ def dashboard_data(request):
 @login_required
 def pricing(request):
     context = {
-        "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
-        "stripe_price_id_monthly": settings.STRIPE_PRICE_ID_MONTHLY,
-        "stripe_price_id_yearly": settings.STRIPE_PRICE_ID_YEARLY,
         "billing_checkout_available": _billing_checkout_enabled(),
         "billing_is_mock": getattr(settings, "BILLING_MOCK_MODE", True),
     }
@@ -6264,95 +6252,46 @@ def pricing(request):
 def upgrade_page(request):
     profile = get_profile(request.user)
 
-    def _price_snapshot(price_id: str) -> dict[str, object]:
+    def _price_snapshot(plan_type: str) -> dict[str, object]:
         snapshot: dict[str, object] = {
-            "id": price_id,
+            "id": plan_type,
             "unit_amount": None,
             "currency": None,
             "interval": None,
             "display": None,
             "nickname": None,
         }
-        if getattr(settings, "BILLING_MOCK_MODE", True):
-            if "year" in (price_id or "").lower():
-                snapshot.update({"currency": "GBP", "interval": "year", "display": "99.00 GBP/year", "nickname": "Yearly Plan"})
-            else:
-                snapshot.update({"currency": "GBP", "interval": "month", "display": "9.99 GBP/month", "nickname": "Monthly Plan"})
-            return snapshot
-        if not price_id or not _billing_live_enabled():
-            return snapshot
-
-        try:
-            price = stripe.Price.retrieve(price_id)
-        except Exception:  # noqa: B902
-            logger.warning("Unable to retrieve Stripe price %s", price_id, exc_info=True)
-            return snapshot
-
-        unit_amount = price.get("unit_amount")
-        currency = (price.get("currency") or "").upper()
-        recurring = price.get("recurring") or {}
-        interval = recurring.get("interval")
-        display = None
-        if unit_amount is not None and currency:
-            try:
-                amount = Decimal(unit_amount) / Decimal("100")
-                display = f"{amount:.2f} {currency}"
-                if interval:
-                    display = f"{display}/{interval}"
-            except Exception:  # noqa: B902
-                display = None
-
-        snapshot.update(
-            {
-                "unit_amount": unit_amount,
-                "currency": currency,
-                "interval": interval,
-                "display": display,
-                "nickname": price.get("nickname"),
-            }
-        )
+        if plan_type == "yearly":
+            snapshot.update(
+                {
+                    "currency": "GBP",
+                    "interval": "year",
+                    "display": "99.00 GBP/year",
+                    "nickname": "Yearly Plan",
+                }
+            )
+        else:
+            snapshot.update(
+                {
+                    "currency": "GBP",
+                    "interval": "month",
+                    "display": "9.99 GBP/month",
+                    "nickname": "Monthly Plan",
+                }
+            )
         return snapshot
 
     context = {
-        "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
-        "price_monthly": settings.STRIPE_PRICE_ID_MONTHLY,
-        "price_yearly": settings.STRIPE_PRICE_ID_YEARLY,
-        "monthly_snapshot": _price_snapshot(settings.STRIPE_PRICE_ID_MONTHLY),
-        "yearly_snapshot": _price_snapshot(settings.STRIPE_PRICE_ID_YEARLY),
+        "monthly_snapshot": _price_snapshot("monthly"),
+        "yearly_snapshot": _price_snapshot("yearly"),
         "promotion_code": settings.UPGRADE_PROMO_CODE,
         "billing_is_mock": getattr(settings, "BILLING_MOCK_MODE", True),
         "billing_checkout_available": _billing_checkout_enabled(),
     }
 
     subscription_summary = None
-    subscription = None
-    if _billing_live_enabled() and profile.stripe_customer_id:
-        subscription = _load_latest_subscription(profile, request=request)
     if profile.is_premium and getattr(settings, "BILLING_MOCK_MODE", True):
         subscription_summary = _mock_subscription_summary(_mock_plan_type_for_profile(profile))
-    elif profile.is_premium and subscription:
-        data = subscription.to_dict()
-        plan = data.get("plan") or {}
-        interval = plan.get("interval")
-        amount_display = None
-        amount = plan.get("amount")
-        currency = (plan.get("currency") or "").upper()
-        days_remaining = _days_until_epoch(data.get("current_period_end"))
-        if amount is not None and currency:
-            try:
-                amount_display = f"{Decimal(amount) / Decimal('100'):.2f} {currency}".strip()
-            except Exception:
-                amount_display = None
-        plan_display = plan.get("nickname") or "Premium"
-        if interval:
-            plan_display = f"{plan_display} ({interval.title()})"
-        subscription_summary = {
-            "status": data.get("status"),
-            "plan_interval": interval,
-            "plan_display": plan_display,
-            "amount_display": amount_display,
-            "days_remaining": days_remaining,
-        }
 
     context.update(
         {
@@ -6367,7 +6306,6 @@ def upgrade_page(request):
 
 @login_required
 def payment_success(request):
-    session_id = request.GET.get("session_id")
     plan_type = request.GET.get("plan_type")
     profile = get_profile(request.user)
     billing_is_mock = getattr(settings, "BILLING_MOCK_MODE", True)
@@ -6383,12 +6321,6 @@ def payment_success(request):
             "mock_checkout_completed",
             {"plan_type": plan_type or "monthly", "mock": True},
         )
-    elif _billing_live_enabled() and session_id:
-        try:
-            session = stripe.checkout.Session.retrieve(session_id)
-            plan_type = session.get("metadata", {}).get("plan_type")
-        except Exception:
-            plan_type = None
     return render(
         request,
         "core/payment_success.html",
@@ -6430,52 +6362,6 @@ def manage_subscription(request):
                 "interval": summary["plan_interval"],
             },
         }
-    elif _billing_live_enabled() and profile.stripe_customer_id:
-        subscription = _load_latest_subscription(profile, expand_latest=True, request=request)
-        if subscription:
-            data = subscription.to_dict()
-            plan = data.get("plan") or {}
-
-            amount = plan.get("amount")
-            currency = (plan.get("currency") or "").upper()
-            amount_display = None
-            if amount is not None:
-                try:
-                    amount_display = f"{Decimal(amount) / Decimal('100'):.2f} {currency}".strip()
-                except Exception:
-                    amount_display = None
-
-            days_remaining = _days_until_epoch(data.get("current_period_end"))
-
-            subscription_info = {
-                "id": data.get("id"),
-                "status": data.get("status"),
-                "cancel_at_period_end": data.get("cancel_at_period_end"),
-                "cancel_at": data.get("cancel_at"),
-                "current_period_end": data.get("current_period_end"),
-                "current_period_start": data.get("current_period_start"),
-                "days_remaining": days_remaining,
-                "plan": {
-                    "nickname": plan.get("nickname"),
-                    "amount": amount,
-                    "amount_display": amount_display,
-                    "currency": currency,
-                "interval": plan.get("interval"),
-                },
-            }
-
-            for key in ("current_period_start", "current_period_end"):
-                epoch = subscription_info.get(key)
-                if epoch:
-                    try:
-                        dt = datetime.utcfromtimestamp(epoch)
-                        target_tz = getattr(timezone, "utc", None) or timezone.get_default_timezone()
-                        if timezone.is_naive(dt):
-                            dt = timezone.make_aware(dt, target_tz)
-                        subscription_info[key] = timezone.localtime(dt)
-                    except (OSError, ValueError, TypeError):
-                        subscription_info[key] = None
-
     context = {
         "profile": profile,
         "subscription": subscription_info,
@@ -6484,127 +6370,6 @@ def manage_subscription(request):
         "billing_is_mock": getattr(settings, "BILLING_MOCK_MODE", True),
     }
     return render(request, "core/manage_subscription.html", context)
-
-
-def _subscription_status(subscription) -> str | None:
-    status = None
-    if subscription is None:
-        return None
-    if hasattr(subscription, "get"):
-        status = subscription.get("status")
-    if status is None:
-        status = getattr(subscription, "status", None)
-    return (status or "").lower() or None
-
-
-def _days_until_epoch(epoch) -> int | None:
-    if not epoch:
-        return None
-    try:
-        dt = datetime.utcfromtimestamp(epoch)
-        target_tz = getattr(timezone, "utc", None) or timezone.get_default_timezone()
-        if timezone.is_naive(dt):
-            dt = timezone.make_aware(dt, target_tz)
-        dt = timezone.localtime(dt)
-        now = timezone.localtime(timezone.now())
-        remaining = (dt - now).total_seconds() / 86400
-        if remaining < 0:
-            return 0
-        return math.ceil(remaining)
-    except (OSError, ValueError, TypeError):
-        return None
-
-
-def _sync_profile_from_subscription(profile, subscription) -> bool:
-    """
-    Keep profile flags in sync with the latest Stripe subscription status.
-    Returns True when premium access should be active.
-    """
-    status = _subscription_status(subscription)
-    if not status:
-        return False
-
-    cancel_at_period_end = False
-    cancel_epoch = None
-    if hasattr(subscription, "get"):
-        cancel_at_period_end = bool(subscription.get("cancel_at_period_end"))
-        cancel_epoch = subscription.get("current_period_end") or subscription.get("cancel_at")
-    else:
-        cancel_at_period_end = bool(getattr(subscription, "cancel_at_period_end", False))
-        cancel_epoch = getattr(subscription, "current_period_end", None) or getattr(
-            subscription, "cancel_at", None
-        )
-
-    plan_period_end = cancel_epoch
-    if plan_period_end:
-        try:
-            dt = datetime.utcfromtimestamp(plan_period_end)
-            aware_dt = timezone.make_aware(dt, timezone.utc)
-            profile.plan_period_end = aware_dt
-            profile.cancel_at_period_end = cancel_at_period_end
-            profile.save(update_fields=["plan_period_end", "cancel_at_period_end"])
-        except (OSError, ValueError, TypeError):
-            pass
-
-    if cancel_at_period_end and cancel_epoch:
-        remaining_days = _days_until_epoch(cancel_epoch)
-        if remaining_days is not None and remaining_days <= 0:
-            if profile.is_premium or profile.plan_type != "free":
-                profile.set_premium(False)
-                logger.info("Billing downgrade for user %s after period end (customer=%s)", profile.user_id, profile.stripe_customer_id)
-                _log_billing_event(profile, "downgrade", "period_end_expired")
-            return False
-
-    if status in {"active", "trialing"}:
-        if not profile.is_premium:
-            profile.set_premium(True)
-        return True
-
-    if status in {"past_due", "unpaid", "canceled", "incomplete", "incomplete_expired"}:
-        if profile.is_premium or profile.plan_type != "free":
-            profile.set_premium(False)
-            logger.info("Billing downgrade for user %s due to status=%s (customer=%s)", profile.user_id, status, profile.stripe_customer_id)
-            _log_billing_event(profile, "downgrade", f"status={status}")
-        return False
-
-    return profile.is_premium
-
-
-def _load_latest_subscription(profile, expand_latest: bool = False, request=None):
-    if not stripe.api_key or not profile.stripe_customer_id:
-        return None
-
-    kwargs = {"customer": profile.stripe_customer_id, "status": "all", "limit": 1}
-    if expand_latest:
-        kwargs["expand"] = ["data.latest_invoice.payment_intent"]
-    subs = stripe.Subscription.list(**kwargs)
-    subscription = subs.data[0] if subs and subs.data else None
-    _sync_profile_from_subscription(profile, subscription)
-    if request is not None and subscription:
-        try:
-            period_end = subscription.get("current_period_end") if hasattr(subscription, "get") else getattr(subscription, "current_period_end", None)
-        except Exception:
-            period_end = None
-        if period_end:
-            request.session["plan_period_end"] = period_end
-    return subscription
-    return subscription
-
-
-def _send_billing_email(profile, subject: str, body: str) -> None:
-    recipient = getattr(profile.user, "email", None)
-    if not recipient:
-        return
-    try:
-        send_mail(
-            subject,
-            body,
-            getattr(settings, "DEFAULT_FROM_EMAIL", None),
-            [recipient],
-            fail_silently=True,
-        )
-    except Exception:  # noqa: B902
-        logger.warning("Unable to send billing email to %s", recipient)
 
 
 def _log_billing_event(profile, event: str, reason: str = "", metadata: dict | None = None) -> None:
@@ -6617,29 +6382,6 @@ def _log_billing_event(profile, event: str, reason: str = "", metadata: dict | N
         )
     except Exception:  # noqa: B902
         logger.warning("Unable to persist billing event for user %s", profile.user_id)
-
-
-def _fetch_active_subscription(profile):
-    if not _billing_live_enabled() or not profile.stripe_customer_id:
-        return None
-
-    active = stripe.Subscription.list(
-        customer=profile.stripe_customer_id,
-        status="active",
-        limit=1,
-    )
-    if active and active.data:
-        return active.data[0]
-
-    trialing = stripe.Subscription.list(
-        customer=profile.stripe_customer_id,
-        status="trialing",
-        limit=1,
-    )
-    if trialing and trialing.data:
-        return trialing.data[0]
-
-    return None
 
 
 def _cancel_active_subscription(profile, *, fail_on_missing=True):
@@ -6659,36 +6401,7 @@ def _cancel_active_subscription(profile, *, fail_on_missing=True):
         _log_billing_event(profile, "cancel", "mock_subscription_cancelled", payload)
         return True, payload, None, None
 
-    if not _billing_live_enabled():
-        return False, None, "Billing is not configured.", 503
-    if not profile.stripe_customer_id:
-        if fail_on_missing:
-            return False, None, "No active subscription found for this account.", 404
-        return True, None, None, None
-
-    try:
-        subscription = _fetch_active_subscription(profile)
-    except stripe.error.StripeError as exc:  # coverage: ignore
-        logger.exception("Unable to list subscriptions for user %s: %s", profile.user_id, exc)
-        return False, None, "We could not reach the billing provider. Please try again soon.", 502
-
-    if not subscription:
-        if fail_on_missing:
-            return False, None, "No active subscription found.", 404
-        return True, None, None, None
-
-    try:
-        updated = stripe.Subscription.modify(subscription.id, cancel_at_period_end=True)
-    except stripe.error.StripeError as exc:
-        logger.exception(
-            "Unable to cancel subscription %s for user %s: %s",
-            subscription.id,
-            profile.user_id,
-            exc,
-        )
-        return False, None, "We couldn't cancel your subscription. Please try again or contact support.", 502
-
-    return True, updated.to_dict(), None, None
+    return False, None, "Only demo billing is supported in this portfolio build.", 503
 
 
 @login_required
@@ -6739,177 +6452,32 @@ def create_checkout_session(request, plan_type="monthly"):
 
     profile = get_profile(request.user)
 
-    if getattr(settings, "BILLING_MOCK_MODE", True):
-        if not profile.stripe_customer_id:
-            profile.stripe_customer_id = _mock_customer_id(request.user)
-            profile.save(update_fields=["stripe_customer_id"])
-        checkout_url = (
-            request.build_absolute_uri(reverse("core:payment_success"))
-            + "?"
-            + urlencode({"plan_type": selected_plan, "mock_checkout": "1"})
-        )
-        _log_billing_event(
-            profile,
-            "upgrade",
-            "mock_checkout_started",
-            {"plan_type": selected_plan, "mock": True},
-        )
-        return JsonResponse({"ok": True, "checkout_url": checkout_url, "mock": True})
-
-    if not _billing_live_enabled():
-        return _json_error("Stripe is not configured.", status=503)
-
-    price_lookup = {
-        "monthly": settings.STRIPE_PRICE_ID_MONTHLY,
-        "yearly": settings.STRIPE_PRICE_ID_YEARLY,
-    }
-    price_id = price_lookup.get(selected_plan, settings.STRIPE_PRICE_ID_MONTHLY)
-    if not price_id:
-        return _json_error("Subscription plan is not configured.", status=503)
-
-    customer_id = profile.stripe_customer_id
-    if not customer_id:
-        customer = stripe.Customer.create(
-            email=request.user.email or None,
-            name=request.user.get_full_name() or request.user.username,
-            metadata={"user_id": request.user.pk},
-        )
-        customer_id = customer["id"]
-        profile.stripe_customer_id = customer_id
+    if not profile.stripe_customer_id:
+        profile.stripe_customer_id = _mock_customer_id(request.user)
         profile.save(update_fields=["stripe_customer_id"])
-
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        customer=customer_id,
-        line_items=[{"price": price_id, "quantity": 1}],
-        allow_promotion_codes=True,
-        success_url=request.build_absolute_uri(reverse("core:payment_success"))
-        + "?session_id={CHECKOUT_SESSION_ID}",
-        cancel_url=request.build_absolute_uri(reverse("core:payment_cancel")),
-        metadata={"user_id": request.user.pk, "plan_type": selected_plan},
+    checkout_url = (
+        request.build_absolute_uri(reverse("core:payment_success"))
+        + "?"
+        + urlencode({"plan_type": selected_plan, "mock_checkout": "1"})
     )
-    return JsonResponse({"ok": True, "checkout_url": session.url})
+    _log_billing_event(
+        profile,
+        "upgrade",
+        "mock_checkout_started",
+        {"plan_type": selected_plan, "mock": True},
+    )
+    return JsonResponse({"ok": True, "checkout_url": checkout_url, "mock": True})
 
 
 @login_required
 @require_POST
 def create_portal_session(request):
     profile = get_profile(request.user)
-    if getattr(settings, "BILLING_MOCK_MODE", True):
-        if not profile.is_premium:
-            return _json_error("Activate the demo premium plan before opening the mock billing portal.", status=400)
-        portal_url = request.build_absolute_uri(reverse("core:manage_subscription")) + "?mock_portal=1"
-        _log_billing_event(profile, "upgrade", "mock_portal_opened", {"mock": True})
-        return JsonResponse({"ok": True, "portal_url": portal_url, "mock": True})
-
-    if not _billing_live_enabled():
-        return _json_error("Stripe is not configured.", status=503)
-
-    if not profile.stripe_customer_id:
-        return _json_error("No Stripe customer found for this account.", status=400)
-
-    portal = stripe.billing_portal.Session.create(
-        customer=profile.stripe_customer_id,
-        return_url=request.build_absolute_uri(reverse("core:manage_subscription")),
-    )
-    return JsonResponse({"ok": True, "portal_url": portal.url})
-
-
-@csrf_exempt
-def stripe_webhook(request):
-    payload = request.body
-    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
-    secret = getattr(settings, "STRIPE_WEBHOOK_SECRET", "")
-
-    try:
-        if secret:
-            event = stripe.Webhook.construct_event(payload, sig_header, secret)
-            data_object = event.data.object
-            event_type = event.type
-        else:
-            parsed = json.loads(payload.decode("utf-8"))
-            event_type = parsed.get("type")
-            data_object = parsed.get("data", {}).get("object", {})
-    except (ValueError, stripe.error.SignatureVerificationError):
-        return HttpResponse(status=400)
-
-    def _profile_for(customer_id=None, user_id=None):
-        profile = None
-        if user_id:
-            profile = UserProfile.objects.filter(user__id=user_id).first()
-        if not profile and customer_id:
-            profile = UserProfile.objects.filter(stripe_customer_id=customer_id).first()
-        return profile
-
-    def activate_premium(user_id, customer_id):
-        profile = _profile_for(customer_id=customer_id, user_id=user_id)
-        if profile:
-            if customer_id and profile.stripe_customer_id != customer_id:
-                profile.stripe_customer_id = customer_id
-                profile.save(update_fields=["stripe_customer_id"])
-            profile.set_premium(True)
-            _log_billing_event(profile, "upgrade", "checkout_completed", {"customer": customer_id})
-
-    def activate_by_customer(customer_id):
-        profile = _profile_for(customer_id=customer_id)
-        if profile:
-            profile.set_premium(True)
-            _log_billing_event(profile, "upgrade", "billing_active", {"customer": customer_id})
-
-    def deactivate_by_customer(customer_id):
-        profile = _profile_for(customer_id=customer_id)
-        if profile:
-            profile.set_premium(False)
-            logger.info("Billing downgrade for user %s (customer=%s)", profile.user_id, customer_id)
-            _log_billing_event(profile, "downgrade", "billing_failure_or_cancel", {"customer": customer_id})
-            _send_billing_email(
-                profile,
-                "Your PredictMyGrade subscription needs attention",
-                "We could not process your latest payment. Your plan has been downgraded to the free tier. Update billing to regain premium access.",
-            )
-
-    if event_type == "checkout.session.completed":
-        metadata = data_object.get("metadata", {})
-        user_id = metadata.get("user_id")
-        customer_id = data_object.get("customer")
-        if user_id:
-            activate_premium(int(user_id), customer_id)
-        else:
-            activate_by_customer(customer_id)
-    elif event_type in {"customer.subscription.deleted", "customer.subscription.updated"}:
-        status = data_object.get("status")
-        customer_id = data_object.get("customer")
-        cancel_at_period_end = data_object.get("cancel_at_period_end")
-        period_end = data_object.get("current_period_end") or data_object.get("cancel_at")
-        if status in {"canceled", "unpaid", "incomplete_expired", "incomplete", "past_due"}:
-            deactivate_by_customer(customer_id)
-        elif status in {"active", "trialing"}:
-            profile = _profile_for(customer_id=customer_id)
-            if profile and cancel_at_period_end and period_end:
-                remaining_days = _days_until_epoch(period_end)
-                if remaining_days is not None and remaining_days <= 0:
-                    deactivate_by_customer(customer_id)
-                    return JsonResponse({"received": True})
-                _send_billing_email(
-                    profile,
-                    "Your PredictMyGrade subscription will end soon",
-                    f"Your membership will end when the current billing period finishes in {remaining_days or 'a few'} day(s). Renew to keep premium access.",
-                )
-            activate_by_customer(customer_id)
-    elif event_type in {
-        "invoice.payment_failed",
-        "payment_intent.payment_failed",
-        "checkout.session.async_payment_failed",
-    }:
-        deactivate_by_customer(data_object.get("customer"))
-    elif event_type in {
-        "invoice.payment_succeeded",
-        "checkout.session.async_payment_succeeded",
-        "payment_intent.succeeded",
-    }:
-        activate_by_customer(data_object.get("customer"))
-
-    return JsonResponse({"received": True})
+    if not profile.is_premium:
+        return _json_error("Activate the demo premium plan before opening the mock billing portal.", status=400)
+    portal_url = request.build_absolute_uri(reverse("core:manage_subscription")) + "?mock_portal=1"
+    _log_billing_event(profile, "upgrade", "mock_portal_opened", {"mock": True})
+    return JsonResponse({"ok": True, "portal_url": portal_url, "mock": True})
 
 
 # Legacy alias

@@ -1,11 +1,11 @@
 <footer class="footer" data-aos="fade-up">
   <div class="footer-inner">
     <div class="footer-left">
-      © 2025 <strong>BrightTrail Studio</strong> — PredictMyGrade
+      &copy; 2025 <strong>PredictMyGrade</strong>
     </div>
     <div class="footer-right">
-      <a href="https://brighttrailstudio.com" target="_blank" class="footer-link">🌐 Visit Studio</a>
-      <button id="supportBtn" class="btn secondary small">💌 Contact Support</button>
+      <a href="{% url 'core:demo_notice' %}" class="footer-link">Demo Notice</a>
+      <button id="supportBtn" class="btn secondary small" type="button">Project Info</button>
     </div>
   </div>
 </footer>
@@ -19,7 +19,7 @@
     if (btn) {
       btn.addEventListener("click", () => {
         Toastify({
-          text: "📧 Contact us at support@brighttrailstudio.com",
+          text: "Portfolio build only. Use the in-app forms for demo feedback.",
           duration: 5000,
           gravity: "bottom",
           position: "right",

@@ -12,7 +12,7 @@
   --warn: #f59e0b;
   --border: #2a214b;
 }
-/* === Light Mode (BrightTrail) === */
+/* === Light Mode === */
 body.theme-light {
   --bg: #faf8ff;
   --bg-soft: #f0edff;

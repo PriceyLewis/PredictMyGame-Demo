@@ -3,6 +3,11 @@ from django.urls import reverse
 
 
 class LegalPagesTests(TestCase):
+    def test_demo_notice_page_renders(self):
+        response = self.client.get(reverse("core:demo_notice"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Demo Notice")
+
     def test_privacy_policy_page_renders(self):
         response = self.client.get(reverse("core:privacy_policy"))
         self.assertEqual(response.status_code, 200)

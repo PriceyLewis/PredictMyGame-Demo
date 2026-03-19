@@ -20,21 +20,21 @@
   <div class="card">
     <h3>Getting started</h3>
     <ul>
-      <li><strong>Add modules:</strong> Visit the Modules page and click “Add module.” Provide the module name, credits, and your latest grade.</li>
-      <li><strong>View charts:</strong> Dashboards update automatically when you log new modules or snapshots.</li>
+      <li><strong>Add modules:</strong> Visit the Modules page and click "Add module." Provide the module name, credits, and your latest grade.</li>
+      <li><strong>View charts:</strong> Dashboards update when you log new modules or snapshots.</li>
       <li><strong>Use insights:</strong> Visit <a href="{% url 'core:smart_insights_page' %}">Smart Insights</a> for personalised study nudges.</li>
-      <li><strong>Export or backup:</strong> Use the export tools to download CSVs or store backups.</li>
-      <li><strong>Import data:</strong> Upload CSV files to bulk add module data instantly.</li>
+      <li><strong>Export or backup:</strong> Use the export tools to download CSVs or store local backups.</li>
+      <li><strong>Import data:</strong> Upload CSV files to bulk add module data quickly.</li>
     </ul>
   </div>
 
   <div class="card">
     <h3>Premium features</h3>
     {% if is_premium %}
-      <p>You currently have <strong>Premium</strong> access—enjoy advanced predictions, Smart Study Insights, and historical comparisons.</p>
+      <p>You currently have <strong>Premium</strong> access and can use the additional prediction, insight, and comparison features included in the demo.</p>
       <a class="btn secondary" href="{% url 'core:manage_subscription' %}">Manage subscription</a>
     {% else %}
-      <p>Upgrade to <a href="{% url 'core:upgrade' %}">Premium</a> to unlock Smart Study Insights, timeline forecasts, and automatic backups.</p>
+      <p>Upgrade to <a href="{% url 'core:upgrade' %}">Premium</a> to unlock the extra demo features, including Smart Study Insights, timeline forecasts, and export tools.</p>
     {% endif %}
   </div>
 </div>

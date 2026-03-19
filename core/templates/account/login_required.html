@@ -3,7 +3,7 @@
 <html lang="en" class="theme-dark">
 <head>
   <meta charset="UTF-8">
-  <title>PredictMyGrade — Login Required</title>
+  <title>PredictMyGrade - Login Required</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#7c3aed">
   <link rel="icon" href="{% static 'img/predictmygrade-favicon.svg' %}">
@@ -22,7 +22,7 @@
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
   <style>
-    html,body {
+    html, body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Inter', sans-serif;
@@ -32,14 +32,14 @@
       min-height: 100vh;
     }
     .card {
-      background: linear-gradient(180deg,var(--card),var(--card-2));
+      background: linear-gradient(180deg, var(--card), var(--card-2));
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 2rem 2.5rem;
       max-width: 420px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 8px 25px rgba(124,58,237,0.25);
+      box-shadow: 0 8px 25px rgba(124, 58, 237, 0.25);
     }
     h1 {
       font-size: 1.8rem;
@@ -53,36 +53,36 @@
     }
     .btn {
       display: inline-block;
-      background: linear-gradient(135deg,var(--brand),var(--brand-2));
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
       color: #fff;
-      padding: .65rem 1.2rem;
-      border-radius: .75rem;
+      padding: 0.65rem 1.2rem;
+      border-radius: 0.75rem;
       text-decoration: none;
       font-weight: 700;
-      transition: .3s;
+      transition: 0.3s;
     }
     .btn:hover {
       filter: brightness(1.1);
-      box-shadow: 0 0 12px rgba(124,58,237,.4);
+      box-shadow: 0 0 12px rgba(124, 58, 237, 0.4);
       transform: translateY(-2px);
     }
     footer {
       margin-top: 2rem;
       color: var(--muted);
-      font-size: .85rem;
+      font-size: 0.85rem;
     }
   </style>
 </head>
 <body>
   <div class="card" data-aos="fade-up">
-    <h1>🔐 Login Required</h1>
+    <h1>Login Required</h1>
     <p>You must be signed in to access this page.</p>
 
     <a href="{% url 'account_login' %}" class="btn">
       <i class="fas fa-sign-in-alt"></i> Sign In
     </a>
 
-    <footer>© 2025 <strong>BrightTrail Studio</strong></footer>
+    <footer>Portfolio build only</footer>
   </div>
 
   <script>AOS.init({ duration: 700 });</script>

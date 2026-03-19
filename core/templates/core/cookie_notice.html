@@ -5,26 +5,27 @@
   <header class="legal-hero">
     <h1>Cookie Notice</h1>
     <p>Last updated: {% now "j F Y" %}</p>
+    <p>This page describes the demo cookie controls included in the portfolio build. It is not a formal compliance notice.</p>
   </header>
 
   <article class="legal-card">
-    <h2>How We Use Cookies</h2>
-    <p>PredictMyGrade uses cookies and similar technologies to operate the website, remember your preferences, and understand how visitors use the service.</p>
+    <h2>How Cookies Work In The Demo</h2>
+    <p>The project uses cookies or local browser storage for practical app behaviour such as sessions, theme preferences, and the mock analytics preference toggle.</p>
   </article>
 
   <article class="legal-card">
-    <h2>Types of Cookies</h2>
+    <h2>What The UI Demonstrates</h2>
     <ul>
-      <li><strong>Essential cookies</strong> &mdash; required to log in, maintain sessions, and keep your workspace secure.</li>
-      <li><strong>Preference cookies</strong> &mdash; remember UI choices such as theme, layout, or AI persona.</li>
-      <li><strong>Analytics cookies</strong> &mdash; collect aggregated usage metrics so we can improve performance.</li>
+      <li><strong>Essential storage</strong> for login sessions and basic app state.</li>
+      <li><strong>Preference storage</strong> for UI settings such as theme choices.</li>
+      <li><strong>Optional analytics toggles</strong> that illustrate how consent controls could work in a fuller product.</li>
     </ul>
   </article>
 
   <article class="legal-card">
-    <h2>Managing Cookies</h2>
-    <p>You can disable or delete cookies in your browser settings at any time. Note that blocking essential cookies may prevent parts of PredictMyGrade from working properly.</p>
-    <p>For more information about how we handle data, please read our <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a>.</p>
+    <h2>Important Limitation</h2>
+    <p>The cookie banner and settings modal are demo interface components. They should not be treated as evidence of audited consent handling or full regulatory compliance.</p>
+    <p>For context on the repo status, see the <a href="{% url 'core:privacy_policy' %}">Privacy Policy</a> demo notice.</p>
   </article>
 </section>
 {% endblock %}
