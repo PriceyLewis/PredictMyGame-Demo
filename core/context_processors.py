@@ -7,6 +7,7 @@ def marketing_settings(request):
     return {
         "ANALYTICS_SCRIPT_URL": getattr(settings, "ANALYTICS_SCRIPT_URL", ""),
         "ANALYTICS_DATA_LAYER": getattr(settings, "ANALYTICS_DATA_LAYER", "dataLayer"),
+        "BILLING_MOCK_MODE": getattr(settings, "BILLING_MOCK_MODE", True),
     }
 
 

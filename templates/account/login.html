@@ -165,6 +165,10 @@
       box-shadow: 0 18px 35px rgba(15, 23, 42, 0.28);
     }
 
+    .provider-button.demo {
+      background: linear-gradient(135deg, #0f766e, #14b8a6);
+    }
+
     .google { background: linear-gradient(135deg, #ea4335, #fbbc05); }
     .microsoft { background: linear-gradient(135deg, #111827, #1f2937); }
     .github { background: linear-gradient(135deg, #111827, #0f172a); }
@@ -210,27 +214,49 @@
     <p class="helper-text">Use a trusted provider to sign in instantly—no passwords to remember.</p>
 
     {% providers_media_js %}
-    {% get_providers as socialaccount_providers %}
 
-    {% for provider in socialaccount_providers %}
-      {% if provider.id == "google" or provider.id == "microsoft" or provider.id == "github" %}
-        <form action="{% provider_login_url provider.id %}" method="post">
-          {% csrf_token %}
-          <button type="submit" class="provider-button {{ provider.id }}" aria-label="Continue with {{ provider.name }}">
-            <span class="provider-icon">
-              {% if provider.id == "google" %}
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google logo">
-              {% elif provider.id == "microsoft" %}
-                <img src="{% static 'icons/microsoft.svg' %}" alt="Microsoft logo">
-              {% elif provider.id == "github" %}
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub logo">
-              {% endif %}
-            </span>
-            <span class="provider-label">Continue with {{ provider.name }}</span>
-          </button>
-        </form>
+    {% if BILLING_MOCK_MODE %}
+    <form action="{% url 'core:mock_login' %}" method="post">
+      {% csrf_token %}
+      {% if request.GET.next %}
+      <input type="hidden" name="next" value="{{ request.GET.next }}">
       {% endif %}
-    {% endfor %}
+      <button type="submit" class="provider-button demo" aria-label="Continue as demo user">
+        <span class="provider-icon">D</span>
+        <span class="provider-label">Continue as Demo User</span>
+      </button>
+    </form>
+    {% endif %}
+
+    <form action="{% provider_login_url 'google' %}" method="post">
+      {% csrf_token %}
+      <button type="submit" class="provider-button google" aria-label="Continue with Google">
+        <span class="provider-icon">
+          <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google logo">
+        </span>
+        <span class="provider-label">Continue with Google</span>
+      </button>
+    </form>
+
+    <form action="{% provider_login_url 'github' %}" method="post">
+      {% csrf_token %}
+      <button type="submit" class="provider-button github" aria-label="Continue with GitHub">
+        <span class="provider-icon">
+          <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub logo">
+        </span>
+        <span class="provider-label">Continue with GitHub</span>
+      </button>
+    </form>
+
+    <form action="{% provider_login_url 'microsoft' %}" method="post">
+      {% csrf_token %}
+      <button type="submit" class="provider-button microsoft" aria-label="Continue with Microsoft">
+        <span class="provider-icon">
+          <img src="{% static 'icons/microsoft.svg' %}" alt="Microsoft logo">
+        </span>
+        <span class="provider-label">Continue with Microsoft</span>
+      </button>
+    </form>
 
     <footer>
       <p>By continuing, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>

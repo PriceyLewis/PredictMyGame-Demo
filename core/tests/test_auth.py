@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from ..adapters import DomainRestrictedAccountAdapter
@@ -13,6 +13,46 @@ class DashboardAccessTests(TestCase):
         login_required_url = reverse("account_login")
         self.assertTrue(response.url.startswith(login_required_url))
         self.assertIn("next=", response.url)
+
+
+class LoginPageTests(TestCase):
+    def test_login_page_shows_github_provider_without_seeded_social_app(self):
+        response = self.client.get(reverse("account_login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Continue with GitHub")
+        self.assertContains(response, reverse("github_login"))
+
+    @override_settings(BILLING_MOCK_MODE=True)
+    def test_login_page_shows_demo_login_in_mock_mode(self):
+        response = self.client.get(reverse("account_login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Continue as Demo User")
+        self.assertContains(response, reverse("core:mock_login"))
+
+    @override_settings(BILLING_MOCK_MODE=False)
+    def test_login_page_hides_demo_login_outside_mock_mode(self):
+        response = self.client.get(reverse("account_login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Continue as Demo User")
+
+
+class MockLoginTests(TestCase):
+    @override_settings(BILLING_MOCK_MODE=True)
+    def test_mock_login_creates_local_session(self):
+        response = self.client.post(reverse("core:mock_login"), follow=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("core:post_login_redirect"))
+        self.assertIn("_auth_user_id", self.client.session)
+
+    @override_settings(BILLING_MOCK_MODE=False)
+    def test_mock_login_is_disabled_outside_mock_mode(self):
+        response = self.client.post(reverse("core:mock_login"))
+
+        self.assertEqual(response.status_code, 404)
 
 
 class PremiumGatingTests(TestCase):

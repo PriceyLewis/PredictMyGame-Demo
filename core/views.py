@@ -25,9 +25,9 @@ from urllib.parse import urlencode, quote
 import stripe
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, Q, F
 from django.db.models.functions import TruncDate
 from django.core.cache import cache
@@ -1692,6 +1692,35 @@ def login_required_view(request):
 
 def signup_disabled_view(request):
     return HttpResponse("Sign ups are currently disabled.", status=403)
+
+
+@require_POST
+def mock_login(request):
+    if not getattr(settings, "BILLING_MOCK_MODE", True):
+        return HttpResponse(status=404)
+
+    next_url = _safe_next_url(request)
+    mock_user = None
+    mock_user_id = request.session.get("mock_demo_user_id")
+    if mock_user_id:
+        mock_user = User.objects.filter(pk=mock_user_id).first()
+
+    if mock_user is None:
+        username = f"demo_{secrets.token_hex(4)}"
+        mock_user = User.objects.create_user(
+            username=username,
+            email=f"{username}@example.com",
+            password=secrets.token_urlsafe(16),
+        )
+        request.session["mock_demo_user_id"] = mock_user.pk
+
+    login(request, mock_user, backend="django.contrib.auth.backends.ModelBackend")
+    messages.success(request, "Signed in with a local demo account.")
+
+    redirect_url = reverse("core:post_login_redirect")
+    if next_url:
+        redirect_url = f"{redirect_url}?{urlencode({'next': next_url})}"
+    return redirect(redirect_url)
 
 # ---------------------------------------------------------------------------
 # Dashboard

@@ -47,6 +47,7 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("delete-account/", views.delete_account, name="delete_account"),
     path("accounts/login-required/", views.login_required_view, name="login_required_view"),
+    path("accounts/mock-login/", views.mock_login, name="mock_login"),
     path("accounts/signup/", views.signup_disabled_view, name="signup_disabled"),
     path("whats-new/", views.whats_new, name="whats_new"),
     path("contact-support/", views.contact_support, name="contact_support"),
